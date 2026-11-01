@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  },
+  "overrides": [
+    {
+      "files": ["src/engine/**"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Engine is deterministic: use rng.ts."
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          { "name": "Date", "message": "Engine is deterministic: use the tick counter." },
+          { "name": "performance", "message": "Engine is deterministic: use the tick counter." },
+          { "name": "setTimeout", "message": "Engine is driven by sim.ts ticks, not timers." },
+          { "name": "setInterval", "message": "Engine is driven by sim.ts ticks, not timers." },
+          {
+            "name": "requestAnimationFrame",
+            "message": "Engine is driven by sim.ts ticks, not frames."
+          },
+          { "name": "window", "message": "Engine must not touch the DOM." },
+          { "name": "document", "message": "Engine must not touch the DOM." }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "react",
+                  "react-dom",
+                  "react/*",
+                  "react-dom/*",
+                  "pixi.js",
+                  "howler",
+                  "zustand",
+                  "idb-keyval"
+                ],
+                "message": "Engine must stay pure: no UI, rendering, audio or storage imports."
+              },
+              {
+                "group": ["**/ui/**", "**/vfx/**", "**/audio/**", "**/meta/**"],
+                "message": "Engine must not depend on outer layers."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

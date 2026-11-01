@@ -1,0 +1,34 @@
+:root {
+  --ink: #111018;
+  --indigo: #1e1b4b;
+  --parchment: #f1e6cc;
+  --parchment-shade: #d9c79f;
+
+  color: var(--ink);
+  background: radial-gradient(circle at 50% 40%, var(--parchment), var(--parchment-shade));
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.title-page {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 0 16px;
+}
+
+.title-page h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 10vw, 5rem);
+  color: var(--indigo);
+  letter-spacing: 0.04em;
+}
+
+.tagline {
+  font-style: italic;
+}

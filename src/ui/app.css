@@ -22,9 +22,14 @@
   --heal: #2f7a3a;
   --ink-fill: #1e1b4b;
 
+  --font-text: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --font-display: 'IM Fell English', Georgia, serif;
+  --font-caps: 'IM Fell English SC', Georgia, serif;
+
   color: var(--ink);
   background: radial-gradient(circle at 50% 35%, var(--parchment), var(--parchment-shade));
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
+  font-size: 17px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -223,4 +228,154 @@ kbd {
   place-content: center;
   font-style: italic;
   color: var(--ink-soft);
+}
+
+/* --- Phase 7: type, tooltips, ink layer, motion, text size, touch --- */
+
+[data-text-size='large'] {
+  font-size: 19.5px;
+}
+
+h1,
+h2,
+.combatant-name,
+.veil-title,
+.run-title,
+.rival-name,
+.loadout-name,
+.item-name {
+  font-family: var(--font-display);
+  font-weight: normal;
+}
+
+.menu h1 {
+  font-family: var(--font-caps);
+}
+
+button {
+  touch-action: manipulation;
+}
+
+.keyword {
+  position: relative;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+.keyword:hover::after,
+.keyword:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(18rem, 80vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: var(--indigo);
+  color: var(--parchment-light);
+  font: 400 0.8rem/1.35 var(--font-text);
+  font-style: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+  pointer-events: none;
+}
+
+.keyword:focus {
+  outline: none;
+  background: color-mix(in srgb, var(--indigo) 12%, transparent);
+}
+
+.ink-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 30;
+  pointer-events: none;
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+
+.tutorial-invite {
+  margin: 1.5rem auto 0;
+  max-width: 28rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid var(--indigo);
+  border-radius: 8px;
+  background: var(--parchment-light);
+}
+
+.tutorial-invite p {
+  margin: 0 0 0.6rem;
+}
+
+.menu-links {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.75rem 0 0;
+}
+
+/* Settings */
+
+.settings {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 2rem 16px 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.setting {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--parchment-light);
+}
+
+.setting legend {
+  padding: 0 0.3rem;
+  font-family: var(--font-display);
+  color: var(--indigo);
+}
+
+.setting-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-options button[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--parchment-light);
+}
+
+.setting-options input[type='range'] {
+  flex: 1;
+  min-width: 10rem;
+  accent-color: var(--indigo);
+}
+
+.setting-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.danger-button {
+  border-color: var(--fire);
+  background: var(--fire);
+  color: var(--parchment-light);
 }

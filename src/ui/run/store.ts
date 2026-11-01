@@ -3,6 +3,7 @@
 // the duel store.
 
 import { create } from 'zustand'
+import { playSound } from '../../audio/sfx.ts'
 import {
   chooseReward,
   createRun,
@@ -94,7 +95,9 @@ export const useRunStore = create<RunStore>()((set, get) => {
 
     chooseReward: (wordId) => {
       const { run, content } = get()
-      if (run && content) setRun(chooseReward(run, wordId, content.economy))
+      if (!run || !content) return
+      if (wordId) playSound('reward')
+      setRun(chooseReward(run, wordId, content.economy))
     },
 
     leaveRun: () => {

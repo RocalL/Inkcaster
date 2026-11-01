@@ -25,9 +25,16 @@ interface Props {
 export function CombatantPanel({ side, name, fighter }: Props) {
   const { hp, maxHp, ward, statuses, minions, echo } = fighter
   const active = (Object.keys(statuses) as StatusId[]).filter((status) => statuses[status] > 0)
+  // Remounting on every hit replays the shake.
+  const hit = useDuelStore((store) => store.hits[side])
   return (
-    <div className={`combatant combatant-${side}`}>
+    <div
+      key={hit}
+      className={`combatant combatant-${side}${hit ? ' hit' : ''}`}
+      data-fighter={side}
+    >
       <div className="combatant-header">
+        {side === 'enemy' && <Sigil name={name} />}
         <span className="combatant-name">{name}</span>
         {ward > 0 && (
           <span className="badge badge-ward" title="Absorbs the next hit, then fades">
@@ -116,4 +123,17 @@ function floaterText({ kind, amount }: Floater): string {
     case 'ward':
       return `+◈${amount}`
   }
+}
+
+/** A rival's emblem: its initial, in an ink blot. */
+function Sigil({ name }: { name: string }) {
+  const initial = name.replace(/^The /, '').charAt(0)
+  return (
+    <span className="sigil" aria-hidden="true">
+      <svg viewBox="0 0 48 48" className="sigil-blot">
+        <path d="M24 3c6 3 15 1 18 9s-2 11 1 17-6 14-14 15-13 1-18-4S1 31 4 23 7 9 13 6s7-4 11-3z" />
+      </svg>
+      <span className="sigil-letter">{initial}</span>
+    </span>
+  )
 }

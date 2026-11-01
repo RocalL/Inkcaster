@@ -4,8 +4,10 @@ import {
   chooseEnemySpell,
   createDuel,
   greedyBot,
+  playerTurn,
   previewIntent,
   previewSpell,
+  rivalTurn,
   runDuel,
   seedRng,
   type DuelState,
@@ -246,5 +248,37 @@ describe('purity and determinism', () => {
       { maxRounds: 5 },
     )
     expect(stalled.outcome).toBe('timeout')
+  })
+})
+
+describe('playerTurn / rivalTurn', () => {
+  it('together they are exactly act, round after round', () => {
+    const content = makeContent({
+      player: { deck: ['strike', 'fire', 'twice', 'ward', 'ice', 'mend', 'call'] },
+    })
+    let state = createDuel(content, 9)
+    for (let round = 0; round < 15 && state.status === 'ongoing'; round++) {
+      const command = greedyBot(state, content)
+      const whole = act(content, state, command)
+      const first = playerTurn(content, state, command)
+      const second =
+        first.state.status === 'ongoing'
+          ? rivalTurn(content, first.state)
+          : { state: first.state, events: [] }
+      expect(second.state).toEqual(whole.state)
+      expect([...first.events, ...second.events]).toEqual(whole.events)
+      state = whole.state
+    }
+  })
+
+  it('after playerTurn the rival has not acted yet and the round has not moved', () => {
+    const content = makeContent()
+    const start = duelWithHand(content, ['strike', 'ward'])
+    const { state, events } = playerTurn(content, start, { type: 'write', words: [0] })
+    expect(state.round).toBe(1)
+    expect(state.enemy.spellsCast).toBe(0)
+    expect(events.some((event) => event.type === 'spellWritten' && event.side === 'enemy')).toBe(
+      false,
+    )
   })
 })

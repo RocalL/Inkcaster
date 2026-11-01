@@ -36,7 +36,26 @@ export function createDuel(content: DuelContent, seed: number): DuelState {
   return state
 }
 
+/**
+ * One full round from the player's command: `playerTurn` then `rivalTurn`.
+ * Used by the bot and the sims; the UI calls the two halves with a pause in between.
+ */
 export function act(content: DuelContent, state: DuelState, command: PlayerCommand): ActionResult {
+  const first = playerTurn(content, state, command)
+  if (first.state === state || first.state.status !== 'ongoing') return first
+  const second = rivalTurn(content, first.state)
+  return { state: second.state, events: [...first.events, ...second.events] }
+}
+
+/**
+ * The player's half of a round: their spell (or discard), their familiars, hand refill.
+ * Returns the same state with a `commandRejected` event when the command is invalid.
+ */
+export function playerTurn(
+  content: DuelContent,
+  state: DuelState,
+  command: PlayerCommand,
+): ActionResult {
   if (state.status !== 'ongoing') return { state, events: [] }
   const rejection = validate(content, state, command)
   if (rejection) return { state, events: [{ type: 'commandRejected', reason: rejection }] }
@@ -60,9 +79,19 @@ export function act(content: DuelContent, state: DuelState, command: PlayerComma
   }
   if (ongoing(ctx)) endTurnMinions(ctx, 'player')
   refillHand(ctx, content.player.handSize)
+  return { state: ctx.state, events: ctx.events }
+}
 
-  // Rival turn.
-  if (ongoing(ctx)) startTurn(ctx, 'enemy')
+/**
+ * The rival's half of a round, after `playerTurn`: its turn start, its spell (unless
+ * Blotted), its familiars, its next intent, then the start of the player's next turn.
+ */
+export function rivalTurn(content: DuelContent, state: DuelState): ActionResult {
+  if (state.status !== 'ongoing') return { state, events: [] }
+  const ctx: ActionContext = { content, state: cloneState(state), events: [] }
+  const { enemy } = ctx.state
+
+  startTurn(ctx, 'enemy')
   if (ongoing(ctx)) {
     if (enemy.countered) {
       enemy.countered = false

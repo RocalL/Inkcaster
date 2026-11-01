@@ -4,9 +4,15 @@
 import { create } from 'zustand'
 import { practiceContentFor } from '../../meta/profile.ts'
 import { useProfileStore } from '../meta/store.ts'
+import { playSound } from '../../audio/sfx.ts'
+import { RIVAL_DELAY_MS } from '../../meta/settings.ts'
+import { useSettingsStore } from '../meta/settings-store.ts'
+import { createTutorialDuel } from '../../meta/tutorial.ts'
+import { playFeedback } from './feedback.ts'
 import {
-  act,
   createDuel,
+  playerTurn,
+  rivalTurn,
   getWord,
   type CombatEvent,
   type DuelContent,
@@ -42,7 +48,7 @@ interface DuelStore {
   state: DuelState | null
   enemyId: string | null
   /** Practice duels can be replayed; run duels hand their result back to the run. */
-  mode: 'practice' | 'run'
+  mode: 'practice' | 'run' | 'tutorial'
   /** Hand indices being written, in order. */
   selection: number[]
   /** Rival intent indices chosen for the selected edit words. */
@@ -51,18 +57,28 @@ interface DuelStore {
   floaters: Floater[]
   log: LogLine[]
   rejection: { reason: RejectReason; id: number } | null
+  /** Your spell has resolved and the rival's turn is about to play: input is locked. */
+  pending: boolean
+  /** The sentence just cast, shown large for a moment. `id` changes on every cast. */
+  lastCast: { side: Side; words: string[]; id: number } | null
+  /** Changes when a fighter is hit, to replay the shake animation. */
+  hits: Record<Side, number>
   nextId: number
 
   /** Practice duel against any rival with the chosen loadout. */
   startDuel: (enemyId: string, loadoutId?: string, seed?: number) => void
   /** A duel whose content and state come from elsewhere (a run floor). */
   startRunDuel: (content: DuelContent, state: DuelState) => void
+  /** The guided first duel. */
+  startTutorial: () => void
   leaveDuel: () => void
   toggleWord: (handIndex: number) => void
   toggleErase: (intentIndex: number) => void
   clearSelection: () => void
   cast: () => void
   discardAndPass: () => void
+  /** Plays the pending rival turn now (the timer calls it; tests call it directly). */
+  finishRivalTurn: () => void
 }
 
 const idle = {
@@ -75,7 +91,17 @@ const idle = {
   floaters: [],
   log: [],
   rejection: null,
+  pending: false,
+  lastCast: null,
+  hits: { player: 0, enemy: 0 },
   nextId: 0,
+}
+
+let rivalTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearRivalTimer(): void {
+  if (rivalTimer !== null) clearTimeout(rivalTimer)
+  rivalTimer = null
 }
 
 export const useDuelStore = create<DuelStore>()((set, get) => {
@@ -102,54 +128,99 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
     }, content.player.maxWords)
   }
 
-  const send = (command: PlayerCommand) => {
+  /** Shows the events of one half-turn: floaters, log, cast banner, hit shakes, sound and ink. */
+  const show = (events: CombatEvent[], next: DuelState) => {
     const { content, state, nextId: firstId } = get()
-    if (!content || !state || state.status !== 'ongoing') return
-    const result = act(content, state, command)
+    if (!content || !state) return
     let nextId = firstId
-
-    if (result.state === state) {
-      const rejected = result.events.find((event) => event.type === 'commandRejected')
-      if (rejected) set({ rejection: { reason: rejected.reason, id: nextId++ }, nextId })
-      return
-    }
-
-    const floaters = floatersFor(result.events).map((floater, order) => ({
+    const floaters = floatersFor(events).map((floater, order) => ({
       ...floater,
       order,
       id: nextId++,
     }))
-    const lines = result.events.flatMap((event) => {
+    const lines = events.flatMap((event) => {
       const text = describeEvent(event, content)
       return text ? [{ id: nextId++, text, round: state.round }] : []
     })
+    const cast = [...events]
+      .reverse()
+      .find((event) => event.type === 'spellWritten' || event.type === 'echo')
+    const hits = { ...get().hits }
+    for (const event of events) {
+      if (event.type === 'damage' && event.amount > 0) hits[event.target] = nextId++
+    }
     set({
-      state: result.state,
-      selection: [],
-      eraseTargets: [],
+      state: next,
       floaters,
       log: [...get().log, ...lines].slice(-LOG_LENGTH),
-      rejection: null,
+      lastCast:
+        cast && (cast.type === 'spellWritten' || cast.type === 'echo')
+          ? { side: cast.side, words: cast.words, id: nextId++ }
+          : get().lastCast,
+      hits,
       nextId,
     })
+    playFeedback(events)
+  }
+
+  const send = (command: PlayerCommand) => {
+    const { content, state, pending, nextId } = get()
+    if (!content || !state || state.status !== 'ongoing' || pending) return
+    const result = playerTurn(content, state, command)
+
+    if (result.state === state) {
+      const rejected = result.events.find((event) => event.type === 'commandRejected')
+      if (rejected) set({ rejection: { reason: rejected.reason, id: nextId }, nextId: nextId + 1 })
+      return
+    }
+
+    set({ selection: [], eraseTargets: [], rejection: null })
+    show(result.events, result.state)
+    if (result.state.status !== 'ongoing') return
+    set({ pending: true })
+    const delay = RIVAL_DELAY_MS[useSettingsStore.getState().settings.pacing]
+    clearRivalTimer()
+    rivalTimer = setTimeout(() => get().finishRivalTurn(), delay)
   }
 
   return {
     ...idle,
     startDuel: (enemyId, loadoutId, seed = randomSeed()) => {
+      clearRivalTimer()
       const { profile } = useProfileStore.getState()
       const content = practiceContentFor(profile, enemyId, loadoutId ?? profile.selectedLoadout)
       set({ ...idle, content, enemyId, state: createDuel(content, seed) })
     },
 
-    startRunDuel: (content, state) =>
-      set({ ...idle, content, enemyId: content.enemy.id, mode: 'run', state }),
+    startRunDuel: (content, state) => {
+      clearRivalTimer()
+      set({ ...idle, content, enemyId: content.enemy.id, mode: 'run', state })
+    },
 
-    leaveDuel: () => set(idle),
+    startTutorial: () => {
+      clearRivalTimer()
+      const { content, state } = createTutorialDuel()
+      set({ ...idle, content, enemyId: content.enemy.id, mode: 'tutorial', state })
+    },
+
+    leaveDuel: () => {
+      clearRivalTimer()
+      set(idle)
+    },
+
+    finishRivalTurn: () => {
+      clearRivalTimer()
+      const { content, state, pending } = get()
+      if (!content || !state || !pending) return
+      const result = rivalTurn(content, state)
+      set({ pending: false })
+      show(result.events, result.state)
+    },
 
     toggleWord: (handIndex) => {
-      const { content, state, selection } = get()
-      if (!content || !state || !state.player.hand[handIndex]) return
+      const { content, state, selection, pending } = get()
+      if (!content || !state || pending || !state.player.hand[handIndex]) return
+      playSound('pick')
       if (selection.includes(handIndex)) {
         set({ selection: selection.filter((index) => index !== handIndex), rejection: null })
         // Dropping an edit word may leave too many erase targets.

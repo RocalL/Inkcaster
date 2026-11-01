@@ -7,7 +7,11 @@ import {
   type DuelState,
   type RejectReason,
 } from '../../engine/index.ts'
-import { describeSpell } from '../text.ts'
+import { currentCoachStep } from '../../meta/tutorial.ts'
+import { useProfileStore } from '../meta/store.ts'
+import { useSettingsStore } from '../meta/settings-store.ts'
+import { RichText } from '../RichText.tsx'
+import { describeSpell, sentence } from '../text.ts'
 import { CombatantPanel } from './CombatantPanel.tsx'
 import { useRunStore } from '../run/store.ts'
 import { useDuelStore } from './store.ts'
@@ -28,10 +32,14 @@ export function DuelScreen() {
         <RivalIntent content={content} state={state} />
       </section>
 
-      <DuelLog round={state.round} />
+      <div className="duel-middle">
+        <CastBanner content={content} />
+        <DuelLog round={state.round} />
+      </div>
 
       <section className="duel-player" aria-label="You">
         <CombatantPanel side="player" name="You" fighter={state.player} />
+        <Coach content={content} state={state} />
         <WritingDesk content={content} state={state} />
         <Hand content={content} state={state} />
       </section>
@@ -91,7 +99,9 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
         })}
       </div>
       <span className="intent-effect">
-        {cancelled ? 'Blotted out: it will not be cast' : describeIntent(content, pending)}
+        <RichText
+          text={cancelled ? 'Blotted out: it will not be cast' : describeIntent(content, pending)}
+        />
       </span>
       {erasing && (
         <span className="intent-hint">
@@ -122,6 +132,7 @@ function WritingDesk({ content, state }: { content: DuelContent; state: DuelStat
   const selection = useDuelStore((store) => store.selection)
   const eraseTargets = useDuelStore((store) => store.eraseTargets)
   const rejection = useDuelStore((store) => store.rejection)
+  const pending = useDuelStore((store) => store.pending)
   const { toggleWord, clearSelection, cast, discardAndPass } = useDuelStore.getState()
 
   const preview = previewSpell(content, state, selection)
@@ -158,19 +169,28 @@ function WritingDesk({ content, state }: { content: DuelContent; state: DuelStat
         })}
       </div>
       <p className={`desk-preview${preview.ok ? '' : ' invalid'}`} aria-live="polite">
-        {selection.length === 0
-          ? 'Pick up to three words: one verb, plus modifiers, inks or edits.'
-          : describeSpell(preview)}
+        <RichText
+          text={
+            selection.length === 0
+              ? 'Pick up to three words: one verb, plus modifiers, inks or edits.'
+              : describeSpell(preview)
+          }
+        />
       </p>
       {rejection && <p className="desk-error">{REJECTION_TEXT[rejection.reason]}</p>}
+      {pending && (
+        <p className="desk-waiting" aria-live="polite">
+          {content.enemy.name} is writing…
+        </p>
+      )}
       <div className="desk-actions">
-        <button type="button" className="primary" disabled={!ready} onClick={cast}>
+        <button type="button" className="primary" disabled={!ready || pending} onClick={cast}>
           Cast <kbd>Enter</kbd>
         </button>
         <button type="button" onClick={clearSelection} disabled={selection.length === 0}>
           Clear <kbd>Esc</kbd>
         </button>
-        <button type="button" className="quiet" onClick={discardAndPass}>
+        <button type="button" className="quiet" disabled={pending} onClick={discardAndPass}>
           {selection.length === 0 ? 'Pass turn' : `Discard ${selection.length} & pass`}
         </button>
       </div>
@@ -181,6 +201,7 @@ function WritingDesk({ content, state }: { content: DuelContent; state: DuelStat
 function Hand({ content, state }: { content: DuelContent; state: DuelState }) {
   const selection = useDuelStore((store) => store.selection)
   const toggleWord = useDuelStore((store) => store.toggleWord)
+  const pending = useDuelStore((store) => store.pending)
   const full = selection.length >= content.player.maxWords
   return (
     <div className="hand" aria-label="Your words">
@@ -191,7 +212,7 @@ function Hand({ content, state }: { content: DuelContent; state: DuelState }) {
             key={card.uid}
             word={getWord(content, card.wordId)}
             selected={selected}
-            disabled={full && !selected}
+            disabled={pending || (full && !selected)}
             keyHint={String(index + 1)}
             onClick={() => toggleWord(index)}
           />
@@ -224,6 +245,14 @@ function ResultOverlay({ won, rivalName }: { won: boolean; rivalName: string }) 
   const enemyId = useDuelStore((store) => store.enemyId)
   const mode = useDuelStore((store) => store.mode)
   const { startDuel, leaveDuel } = useDuelStore.getState()
+  const finishTutorial = (next: 'run' | 'menu') => {
+    useSettingsStore.getState().change({ tutorialDone: true })
+    leaveDuel()
+    if (next === 'run') {
+      const { profile } = useProfileStore.getState()
+      useRunStore.getState().startRun(profile.selectedLoadout)
+    }
+  }
   const continueRun = () => {
     const { state } = useDuelStore.getState()
     if (state) useRunStore.getState().finishDuel(state)
@@ -233,7 +262,16 @@ function ResultOverlay({ won, rivalName }: { won: boolean; rivalName: string }) 
     <div className="veil" role="dialog" aria-modal="true" aria-label="Duel over">
       <p className="veil-title">{won ? 'Victory' : 'Defeat'}</p>
       <p>{won ? `The ${rivalName}'s pages burn.` : 'Your pages blur into ink.'}</p>
-      {mode === 'run' ? (
+      {mode === 'tutorial' ? (
+        <div className="veil-actions">
+          <button type="button" className="primary" autoFocus onClick={() => finishTutorial('run')}>
+            Begin a run
+          </button>
+          <button type="button" className="quiet" onClick={() => finishTutorial('menu')}>
+            Back to menu
+          </button>
+        </div>
+      ) : mode === 'run' ? (
         <div className="veil-actions">
           <button type="button" className="primary" autoFocus onClick={continueRun}>
             Continue
@@ -250,6 +288,48 @@ function ResultOverlay({ won, rivalName }: { won: boolean; rivalName: string }) 
         </div>
       )}
     </div>
+  )
+}
+
+/** The sentence just cast, written large for a moment. */
+function CastBanner({ content }: { content: DuelContent }) {
+  const lastCast = useDuelStore((store) => store.lastCast)
+  if (!lastCast) return <div className="cast-banner" />
+  return (
+    <div className="cast-banner" aria-hidden="true">
+      <span key={lastCast.id} className={`cast-sentence cast-${lastCast.side}`}>
+        {sentence(content, lastCast.words)}
+      </span>
+    </div>
+  )
+}
+
+/** Tutorial guidance, shown above the writing desk. */
+function Coach({ content, state }: { content: DuelContent; state: DuelState }) {
+  const mode = useDuelStore((store) => store.mode)
+  const selection = useDuelStore((store) => store.selection)
+  const eraseTargets = useDuelStore((store) => store.eraseTargets)
+  const pending = useDuelStore((store) => store.pending)
+  const leaveDuel = useDuelStore((store) => store.leaveDuel)
+  if (mode !== 'tutorial') return null
+  const step = currentCoachStep({ state, content, selection, eraseTargets, pending })
+  if (!step) return null
+  return (
+    <aside className="coach" aria-live="polite">
+      <p>
+        <RichText text={step.text} />
+      </p>
+      <button
+        type="button"
+        className="quiet"
+        onClick={() => {
+          useSettingsStore.getState().change({ tutorialDone: true })
+          leaveDuel()
+        }}
+      >
+        Skip tutorial
+      </button>
+    </aside>
   )
 }
 

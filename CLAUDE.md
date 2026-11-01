@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 7 — Polish (not started; Phase 6 content targets reached, playtest recommended first).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 7 — Polish (built; waiting for the juice and onboarding playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -23,7 +23,7 @@ npm run sim -- --progression                      # 20 runs in a row, spending g
 npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel, round by round
 ```
 
-Playtest shortcuts (they ignore unlocks): `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel; `?run=warden&seed=3` starts a run; `?scriptorium` opens the Scriptorium.
+Playtest shortcuts (they ignore unlocks): `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel; `?run=warden&seed=3` starts a run; `?scriptorium`, `?settings`, `?tutorial`.
 
 `scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
@@ -49,19 +49,23 @@ src/
   data/     Words, rivals, loadouts, run floors / rewards / economy, scriptorium catalog,
             ascension levels, as data (imports engine types)
   meta/     Pure profile rules (profile.ts: purchases, bindings, content per profile, bankRun),
-            save.ts (versioned save + migrations, IndexedDB), autobuy.ts (sim spending policy)
+            save.ts (versioned save + migrations, IndexedDB), autobuy.ts (sim spending policy),
+            settings.ts (settings record), tutorial.ts (tutorial duel + coach steps)
   ui/       React screens: Menu, Scriptorium, Run, Duel, Rewards
     text.ts           player-facing wording for words/spells/events (pure; the sim log uses it too)
     combat/store.ts   Zustand duel store: selection, erase targets, floaters, log; practice or run mode
     run/store.ts      Zustand run store: current run; saves it in the profile, banks gold at the end
     meta/store.ts     Zustand profile store: loads once, saves after every change (if storage works)
-  vfx/      PixiJS layer behind the UI
-  audio/    Howler.js wrappers
+    meta/settings-store.ts  settings (localStorage, separate from the profile save)
+    combat/feedback.ts      duel events -> sounds and ink splashes
+    glossary.ts + RichText  keyword tooltips
+  vfx/      ink-layer.ts: canvas ink splashes (runs only while particles live)
+  audio/    sfx.ts: sound effects synthesized with Web Audio (no files)
 scripts/    Node CLI tools (sim)
 tests/      Engine unit tests (own fixtures, not game data) + data checks + bot simulations
 ```
 
-Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Turn order inside `act`: your spell, your familiars strike, refill; rival turn start (burn, regen, thorns decay, echo), its spell (unless Blotted), its familiars, its next intent; your turn start. Runs (`run.ts`) sit above duels: `createRun` → `enterDuel` → (duel played with `act`) → `finishDuel` → `chooseReward` → next floor; phases map / duel / reward / won / lost. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
+Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Turn order inside `act`: your spell, your familiars strike, refill; rival turn start (burn, regen, thorns decay, echo), its spell (unless Blotted), its familiars, its next intent; your turn start. The UI plays a round in two halves (`playerTurn`, pause, `rivalTurn`); `act` is their composition and is what the bot and sims use. Runs (`run.ts`) sit above duels: `createRun` → `enterDuel` → (duel played with `act`) → `finishDuel` → `chooseReward` → next floor; phases map / duel / reward / won / lost. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
 
 ## Non-negotiable rules
 

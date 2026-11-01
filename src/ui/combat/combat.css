@@ -527,3 +527,155 @@
     display: none;
   }
 }
+
+/* --- Phase 7: juice --- */
+
+.combatant.hit {
+  animation: shake 320ms ease-out;
+}
+
+@keyframes shake {
+  20% {
+    transform: translateX(-6px) rotate(-0.4deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(0.3deg);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.duel-middle {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cast-banner {
+  min-height: 3.2rem;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.cast-sentence {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  animation: ink-in 1800ms ease-out forwards;
+}
+
+.cast-player {
+  color: var(--indigo);
+}
+
+.cast-enemy {
+  color: var(--fire);
+}
+
+@keyframes ink-in {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+    letter-spacing: 0.25em;
+  }
+  20% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 0.02em;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+.sigil {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-grid;
+  place-content: center;
+  align-self: center;
+}
+
+.sigil-blot {
+  position: absolute;
+  inset: 0;
+  fill: var(--indigo);
+}
+
+.sigil-letter {
+  position: relative;
+  font-family: var(--font-caps);
+  font-size: 1.4rem;
+  color: var(--parchment-light);
+}
+
+.coach {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border: 2px solid var(--arcane);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--arcane) 10%, var(--parchment-light));
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.coach p {
+  margin: 0;
+  flex: 1;
+}
+
+.desk-waiting {
+  margin: 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--fire);
+  animation: breathe 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.word-name {
+  font-family: var(--font-display);
+  font-weight: normal;
+}
+
+.word {
+  background:
+    radial-gradient(circle at 30% 20%, rgb(255 255 255 / 45%), transparent 60%),
+    var(--parchment-light);
+}
+
+@media (max-width: 560px) {
+  .duel-log ol {
+    max-height: 5.5rem;
+  }
+
+  .cast-banner {
+    min-height: 2.4rem;
+  }
+
+  .coach {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+}

@@ -2,7 +2,6 @@
 
 ## Open
 
-- [ ] Art approach: flat icons + particles, or hand-drawn
 - [ ] Domain and name availability (inkcaster.com / .io / .gg, itch.io, Steam)
 
 ## Log
@@ -48,3 +47,9 @@
 | 2026-11-01 | Stain hurts on cast, then drops by 1 (not at turn start)                                                                                                         | Hex 3 should deal 3 on the first cast                                                                                       |
 | 2026-11-01 | Brand, Stain and Burn damage are not "hits": no ward use (Burn/Stain), no Brand, no Thorns                                                                       | Keeps statuses readable and stops loops                                                                                     |
 | 2026-11-01 | Each run draws its boss from 3; Ascension 1-5 stacks (+15% rival HP, -15% heal, +30% boss HP, -1 reward, rivals start Ward 6), +10% gold per level               | Variety at the end of runs; a long-term challenge after the Scriptorium is bought out                                       |
+| 2026-11-01 | Art: ink and typography (no illustrations): calligraphic fonts, sigils, ink splashes                                                                             | Buildable without an artist, fits "written spells", small download                                                          |
+| 2026-11-01 | Audio: sound effects synthesized with Web Audio; Howler.js dropped                                                                                               | No files or licences; tiny                                                                                                  |
+| 2026-11-01 | VFX: small canvas layer + CSS; PixiJS dropped                                                                                                                    | A turn-based game doesn't need a GPU particle engine; no 450 KB dependency                                                  |
+| 2026-11-01 | Settings and tutorial-done are stored in localStorage as their own versioned record                                                                              | Keeps the profile save format unchanged                                                                                     |
+| 2026-11-01 | A round is shown in two halves with a pause (`playerTurn` / `rivalTurn`); `act` stays their composition                                                          | Readable pacing without touching the bot or sims                                                                            |
+| 2026-11-01 | Fonts from Google Fonts for now                                                                                                                                  | Self-host them with the PWA in Phase 8 for offline play                                                                     |

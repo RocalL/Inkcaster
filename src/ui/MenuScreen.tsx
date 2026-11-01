@@ -2,13 +2,17 @@ import { BOSS_IDS, ENEMIES, LOADOUTS, RUN_CONTENT } from '../data/index.ts'
 import { ASCENSIONS } from '../data/ascension.ts'
 import { LOADOUT_UNLOCK_COST } from '../data/scriptorium.ts'
 import { useDuelStore } from './combat/store.ts'
+import { useSettingsStore } from './meta/settings-store.ts'
 import { useProfileStore } from './meta/store.ts'
 import { useRunStore } from './run/store.ts'
 
 export function MenuScreen() {
   const profile = useProfileStore((store) => store.profile)
   const persistent = useProfileStore((store) => store.persistent)
-  const { selectLoadout, selectAscension, openScriptorium } = useProfileStore.getState()
+  const { selectLoadout, selectAscension, openScriptorium, openSettings } =
+    useProfileStore.getState()
+  const tutorialDone = useSettingsStore((store) => store.settings.tutorialDone)
+  const startTutorial = useDuelStore((store) => store.startTutorial)
   const startDuel = useDuelStore((store) => store.startDuel)
   const { startRun, resumeRun } = useRunStore.getState()
   const floors = RUN_CONTENT.floors.length
@@ -29,6 +33,15 @@ export function MenuScreen() {
           </span>
         )}
       </p>
+
+      {!tutorialDone && (
+        <div className="tutorial-invite">
+          <p>New to Inkcaster? Learn to write spells in a short guided duel.</p>
+          <button type="button" className="primary" onClick={startTutorial}>
+            Play the tutorial
+          </button>
+        </div>
+      )}
 
       {!persistent && (
         <p className="storage-warning" role="status">
@@ -124,6 +137,16 @@ export function MenuScreen() {
           <span>spend gold on words, rewrites and bindings</span>
         </button>
       </div>
+      <p className="menu-links">
+        <button type="button" className="quiet" onClick={openSettings}>
+          Settings
+        </button>
+        {tutorialDone && (
+          <button type="button" className="quiet" onClick={startTutorial}>
+            Tutorial
+          </button>
+        )}
+      </p>
 
       <details className="practice">
         <summary>Practice duel</summary>

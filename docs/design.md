@@ -93,7 +93,7 @@ The profile and any run in progress are saved between duels. Abandoning a run ke
 | Passives | Bindings         |
 | Enemies  | Rival inkcasters |
 
-Visual direction: ink black and deep indigo on aged parchment, with one accent ink color per element (fire = red, ice = blue, arcane = violet). On death, pages burn or blur.
+Visual direction: **ink and typography**, no illustrations. Ink black and deep indigo on aged parchment, with one accent ink colour per element (fire = red, ice = blue, arcane = violet). Type: EB Garamond for text, IM Fell English for names and titles. Rivals have an ink-blot sigil with their initial. Casting writes the sentence large across the page, hits shake the fighter and splash ink, and on death pages burn or blur.
 
 ## Word data shape
 
@@ -118,17 +118,17 @@ Starter spells 8-10 | Total spells 60-80 (3 tiers each) | Enemies 8-10 + 2-3 bos
 
 ## Tech stack
 
-| Concern       | Choice                                   |
-| ------------- | ---------------------------------------- |
-| Language      | TypeScript (strict)                      |
-| Build         | Vite                                     |
-| UI            | React + CSS animations                   |
-| VFX           | PixiJS canvas layer behind the UI        |
-| UI state      | Zustand                                  |
-| Combat engine | Custom, pure TypeScript                  |
-| Audio         | Howler.js                                |
-| Persistence   | IndexedDB via `idb-keyval`               |
-| Tests         | Vitest                                   |
-| Hosting       | GitHub Pages (itch.io later for release) |
+| Concern       | Choice                                               |
+| ------------- | ---------------------------------------------------- |
+| Language      | TypeScript (strict)                                  |
+| Build         | Vite                                                 |
+| UI            | React + CSS animations                               |
+| VFX           | Small hand-written canvas layer (ink splashes) + CSS |
+| UI state      | Zustand                                              |
+| Combat engine | Custom, pure TypeScript                              |
+| Audio         | Web Audio API, synthesized sound effects             |
+| Persistence   | IndexedDB via `idb-keyval`                           |
+| Tests         | Vitest                                               |
+| Hosting       | GitHub Pages (itch.io later for release)             |
 
-Add each dependency in the phase that first needs it (for example, Pixi in Phase 7 and idb-keyval in Phase 5), not upfront.
+Add each dependency in the phase that first needs it, not upfront. PixiJS and Howler.js were dropped in Phase 7: the turn-based game doesn't need a GPU particle engine, and sounds are synthesized.

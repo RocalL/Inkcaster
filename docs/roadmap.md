@@ -105,3 +105,14 @@ The "done when" is content targets, checked by `tests/data/data.test.ts`.
 - [x] Save v2 with a v1 migration (ascension fields)
 - [x] Sims: duel matrix (6 x 12), runs, progression climbing ascension
 - [x] Content targets reached. Phase 6 done (2026-11-01). A quick playtest of the new words and rivals is recommended before Phase 7
+
+## Phase 7 checklist
+
+- [x] Onboarding: guided tutorial duel (coach steps advance as you act; offered on first launch, replayable)
+- [x] Glossary tooltips: keywords (Burn, Ward, piercing, familiars, Echo...) explain themselves on hover or tap, on words, the preview and the rival's spell
+- [x] Settings (own versioned record, not the profile save): volume, mute, rival pacing, motion, text size, replay tutorial, reset progress
+- [x] Juice: your spell, then a pause, then the rival's turn (`playerTurn` / `rivalTurn`); cast sentence written large; hit shakes; ink splashes on a canvas layer; synthesized sound effects
+- [x] Art: ink and typography (EB Garamond + IM Fell English, rival sigils, paper word pages, ornate rewrite tiers)
+- [x] Mobile/touch: tap tooltips, touch-action, phone layout checked at 500px
+- [x] 60 fps: the canvas loop runs only while ink is in the air; animations use transforms and opacity only
+- [ ] **Playtest: does it feel juicy and onboardable?** Play the tutorial as a newcomer; check sound and phones. This is the "done when"; stop here

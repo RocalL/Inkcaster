@@ -1,4 +1,5 @@
 import type { WordDef } from '../../engine/index.ts'
+import { RichText } from '../RichText.tsx'
 import { KIND_LABELS, describeWord } from '../text.ts'
 
 interface Props {
@@ -26,7 +27,9 @@ export function WordPage({ word, selected = false, disabled = false, keyHint, on
         {word.tier && <span className="word-tier"> {word.tier === 2 ? 'II' : 'III'}</span>}
       </span>
       <span className="word-kind">{KIND_LABELS[word.kind]}</span>
-      <span className="word-text">{describeWord(word)}</span>
+      <span className="word-text">
+        <RichText text={describeWord(word)} focusable={false} />
+      </span>
       {keyHint && <span className="key-hint">{keyHint}</span>}
     </button>
   )

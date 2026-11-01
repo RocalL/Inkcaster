@@ -42,6 +42,14 @@ describe('duel store', () => {
     store().cast()
     expect(store().selection).toEqual([])
     expect(store().state?.enemy.hp).toBe(hpBefore - 8)
+    // Your spell resolved; the rival waits for the pause.
+    expect(store().pending).toBe(true)
+    expect(store().state?.round).toBe(1)
+    expect(store().lastCast?.words).toEqual(['strike', 'twice'])
+    store().toggleWord(0)
+    expect(store().selection).toEqual([])
+    store().finishRivalTurn()
+    expect(store().pending).toBe(false)
     expect(store().state?.round).toBe(2)
     expect(store().floaters.length).toBeGreaterThan(0)
     expect(store().log.length).toBeGreaterThan(0)
@@ -69,8 +77,16 @@ describe('duel store', () => {
   it('discard and pass ends the turn', () => {
     store().toggleWord(1)
     store().discardAndPass()
+    store().finishRivalTurn()
     expect(store().state?.round).toBe(2)
     expect(store().state?.player.discardPile.map((card) => card.wordId)).toEqual(['twice'])
+  })
+
+  it('a hit replays the shake on that fighter', () => {
+    const before = store().hits.enemy
+    store().toggleWord(0)
+    store().cast()
+    expect(store().hits.enemy).not.toBe(before)
   })
 
   it('leaving resets to the menu', () => {

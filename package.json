@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sim": "node --disable-warning=ExperimentalWarning scripts/sim.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

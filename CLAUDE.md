@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 0 — Foundations.** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 2 — Playable combat UI.** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -17,8 +17,11 @@ npm run build      # typecheck + production build (dist/)
 npm run test       # Vitest (run once)
 npm run lint       # oxlint + tsc -b (typecheck)
 npm run format     # Prettier write (CI runs format:check)
-npm run sim        # headless bot simulation (from Phase 1)
+npm run sim        # headless bot sim: 1,000 seeded fights per enemy, win rates
+npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel's event log
 ```
+
+`scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
 Node 22 LTS via nvm (`.nvmrc`). Package manager: npm. Deploy: GitHub Actions to GitHub Pages on push to `main`.
 
@@ -26,20 +29,27 @@ Node 22 LTS via nvm (`.nvmrc`). Package manager: npm. Deploy: GitHub Actions to 
 
 ```
 src/
-  engine/   Pure logic. NO React, NO DOM, NO Pixi imports.
-    sim.ts      fixed-timestep loop (20 ticks/s)
-    state.ts    CombatState (player, enemy, minions, statuses, piles)
+  engine/   Pure logic. NO React, NO DOM, NO Pixi imports. Never imports data/.
+    types.ts    content definitions (SpellDef, EnemyDef, PlayerSetup, Effect)
+    state.ts    CombatState (plain data), createCombat, cloneState
+    sim.ts      step() (one tick), advanceClock (pause/slow), runDuel (headless)
+    hand.ts     ink regen, slot cooldown -> draw -> reshuffle cycle
     effects.ts  effect resolver
-    events.ts   event bus (OnPlay, OnDamage, OnDeath, OnTick...)
-    rng.ts      seeded RNG
-    ai.ts       enemy inkcaster behaviours
-  data/     Spells, enemies, passives, loadouts as data
+    events.ts   events emitted per step (triggers/bus come in Phase 3)
+    ai.ts       enemy inkcaster behaviours (telegraphed casts)
+    rng.ts      seeded RNG (state stored in CombatState)
+    time.ts     20 ticks/s, seconds -> ticks
+    bot.ts      greedy player policy for sims
+  data/     Spells, enemies, passives, loadouts as data (imports engine types)
   meta/     Profile, gold, unlocks, save/load, migrations
   ui/       React screens: Menu, Scriptorium, Run, Combat, Rewards
   vfx/      PixiJS layer behind the UI
   audio/    Howler.js wrappers
-tests/      Engine unit tests + bot simulations
+scripts/    Node CLI tools (sim)
+tests/      Engine unit tests (own fixtures, not game data) + data checks + bot simulations
 ```
+
+Engine model in one paragraph: `step(content, state, commands)` returns a new state and the events for that tick. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Order inside a tick: player commands, ink, hand, enemy. Casting puts the page in the discard pile and empties its slot for the spell's cooldown, then the slot draws the next page. Enemies follow a data-defined pattern: they idle for `castGap`, telegraph a cast bar for `castTime`, then resolve. Player casts are instant.
 
 ## Non-negotiable rules
 

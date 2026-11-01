@@ -1,0 +1,103 @@
+import type { SpellDef } from '../engine/index.ts'
+
+// Starter spells. Phase 1 only has damage / heal / shield / draw; statuses, minions and
+// counters arrive in Phase 3. Numbers are first-pass placeholders, tuned with `npm run sim`.
+
+export const STARTER_SPELLS: readonly SpellDef[] = [
+  {
+    id: 'spark',
+    name: 'Spark',
+    type: 'direct',
+    cost: 1,
+    cooldown: 1.5,
+    tags: ['fire'],
+    effects: [{ kind: 'damage', amount: 3 }],
+  },
+  {
+    id: 'ember_bolt',
+    name: 'Ember Bolt',
+    type: 'direct',
+    cost: 2,
+    cooldown: 3,
+    tags: ['fire'],
+    effects: [{ kind: 'damage', amount: 6 }],
+  },
+  {
+    id: 'scorch',
+    name: 'Scorch',
+    type: 'direct',
+    cost: 3,
+    cooldown: 4,
+    tags: ['fire'],
+    effects: [{ kind: 'damage', amount: 10 }],
+  },
+  {
+    id: 'frost_shard',
+    name: 'Frost Shard',
+    type: 'direct',
+    cost: 2,
+    cooldown: 2.5,
+    tags: ['ice'],
+    effects: [
+      { kind: 'damage', amount: 4 },
+      { kind: 'shield', amount: 2 },
+    ],
+  },
+  {
+    id: 'ice_ward',
+    name: 'Ice Ward',
+    type: 'ward',
+    cost: 2,
+    cooldown: 4,
+    tags: ['ice', 'ward'],
+    effects: [{ kind: 'shield', amount: 8 }],
+  },
+  {
+    id: 'inkblot_shield',
+    name: 'Inkblot Shield',
+    type: 'ward',
+    cost: 1,
+    cooldown: 2.5,
+    tags: ['ward'],
+    effects: [{ kind: 'shield', amount: 4 }],
+  },
+  {
+    id: 'quill_jab',
+    name: 'Quill Jab',
+    type: 'direct',
+    cost: 0,
+    cooldown: 2,
+    tags: ['arcane'],
+    effects: [{ kind: 'damage', amount: 2 }],
+  },
+  {
+    id: 'arcane_insight',
+    name: 'Arcane Insight',
+    type: 'utility',
+    cost: 1,
+    cooldown: 3,
+    tags: ['arcane'],
+    effects: [{ kind: 'draw', count: 2 }],
+  },
+  {
+    id: 'mend',
+    name: 'Mend',
+    type: 'utility',
+    cost: 2,
+    cooldown: 5,
+    tags: ['ward'],
+    effects: [{ kind: 'heal', amount: 6 }],
+  },
+  {
+    id: 'margin_note',
+    name: 'Margin Note',
+    type: 'utility',
+    cost: 1,
+    cooldown: 2,
+    tags: ['arcane'],
+    effects: [
+      { kind: 'draw', count: 1 },
+      { kind: 'shield', amount: 2 },
+    ],
+  },
+]

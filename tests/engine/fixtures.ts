@@ -1,135 +1,82 @@
 // Small hand-made content for engine unit tests, independent from the tunable game data.
 
 import {
-  createCombat,
-  isPlayerTurn,
-  step,
-  type CombatContent,
-  type CombatEvent,
-  type CombatState,
+  createDuel,
+  type DuelContent,
+  type DuelState,
   type EnemyDef,
-  type PlayerCommand,
   type PlayerSetup,
-  type SpellDef,
+  type WordDef,
 } from '../../src/engine/index.ts'
 
-export const TEST_SPELLS: Record<string, SpellDef> = {
-  bolt: {
-    id: 'bolt',
-    name: 'Bolt',
-    type: 'direct',
-    cost: 1,
-    time: 1,
-    tags: [],
-    effects: [{ kind: 'damage', amount: 5 }],
-  },
-  ward: {
-    id: 'ward',
-    name: 'Ward',
-    type: 'ward',
-    cost: 1,
-    time: 1,
-    tags: [],
-    effects: [{ kind: 'shield', amount: 4 }],
-  },
-  salve: {
-    id: 'salve',
-    name: 'Salve',
-    type: 'utility',
-    cost: 1,
-    time: 1,
-    tags: [],
-    effects: [{ kind: 'heal', amount: 5 }],
-  },
-  study: {
-    id: 'study',
-    name: 'Study',
-    type: 'utility',
-    cost: 1,
-    time: 1,
-    tags: [],
-    effects: [{ kind: 'draw', count: 1 }],
-  },
-  costly: {
-    id: 'costly',
-    name: 'Costly',
-    type: 'direct',
-    cost: 5,
-    time: 1,
-    tags: [],
-    effects: [{ kind: 'damage', amount: 1 }],
-  },
-}
+export const TEST_WORDS: Record<string, WordDef> = Object.fromEntries(
+  (
+    [
+      { id: 'strike', name: 'Strike', kind: 'verb', effects: [{ kind: 'damage', amount: 4 }] },
+      { id: 'ward', name: 'Ward', kind: 'verb', effects: [{ kind: 'shield', amount: 6 }] },
+      { id: 'mend', name: 'Mend', kind: 'verb', effects: [{ kind: 'heal', amount: 5 }] },
+      { id: 'twice', name: 'Twice', kind: 'modifier', modifier: { type: 'repeat', times: 2 } },
+      {
+        id: 'greater',
+        name: 'Greater',
+        kind: 'modifier',
+        modifier: { type: 'amplify', amount: 3 },
+      },
+      {
+        id: 'fire',
+        name: 'Fire',
+        kind: 'ink',
+        element: 'fire',
+        effects: [{ kind: 'applyStatus', status: 'burn', stacks: 2 }],
+      },
+      {
+        id: 'ice',
+        name: 'Ice',
+        kind: 'ink',
+        element: 'ice',
+        effects: [{ kind: 'applyStatus', status: 'chill', stacks: 3 }],
+      },
+      {
+        id: 'arcane',
+        name: 'Arcane',
+        kind: 'ink',
+        element: 'arcane',
+        effects: [{ kind: 'draw', count: 1 }],
+      },
+      { id: 'erase', name: 'Erase', kind: 'edit', edit: 'erase' },
+    ] satisfies WordDef[]
+  ).map((word) => [word.id, word]),
+)
 
-/** Enemy that never acts within a normal test (first cast after 1000s). */
-export const PASSIVE_ENEMY: EnemyDef = {
+/** Casts a plain Strike (4 damage) every turn. */
+export const TEST_ENEMY: EnemyDef = {
   id: 'dummy',
   name: 'Dummy',
-  maxHp: 20,
+  maxHp: 30,
   behaviour: 'rotation',
-  castGap: 1,
-  openingDelay: 1000,
-  spells: [{ id: 'poke', name: 'Poke', castTime: 0.5, effects: [{ kind: 'damage', amount: 3 }] }],
+  spells: [{ words: ['strike'] }],
 }
 
 export const TEST_PLAYER: PlayerSetup = {
   maxHp: 30,
-  maxInk: 5,
-  startingInk: 5,
-  inkPerSecond: 1,
-  handSize: 2,
-  grimoire: ['bolt', 'bolt', 'bolt', 'bolt'],
+  handSize: 4,
+  maxWords: 3,
+  deck: ['strike', 'strike', 'ward', 'mend', 'twice', 'greater', 'fire', 'ice'],
 }
 
 export function makeContent(
   overrides: { player?: Partial<PlayerSetup>; enemy?: Partial<EnemyDef> } = {},
-): CombatContent {
+): DuelContent {
   return {
-    spells: TEST_SPELLS,
+    words: TEST_WORDS,
     player: { ...TEST_PLAYER, ...overrides.player },
-    enemy: { ...PASSIVE_ENEMY, ...overrides.enemy },
+    enemy: { ...TEST_ENEMY, ...overrides.enemy },
   }
 }
 
-export function makeCombat(content: CombatContent = makeContent(), seed = 1): CombatState {
-  return createCombat(content, seed)
-}
-
-/** Steps `count` times; commands are only sent on the first step. Returns every event emitted. */
-export function run(
-  content: CombatContent,
-  state: CombatState,
-  count: number,
-  commands: PlayerCommand[] = [],
-): { state: CombatState; events: CombatEvent[] } {
-  const events: CombatEvent[] = []
-  let current = state
-  for (let i = 0; i < count; i++) {
-    const result = step(content, current, i === 0 ? commands : [])
-    current = result.state
-    events.push(...result.events)
-  }
-  return { state: current, events }
-}
-
-/** Lets `ticks` of time pass, gathering ink whenever it is the player's turn. */
-export function advance(
-  content: CombatContent,
-  state: CombatState,
-  ticks: number,
-): { state: CombatState; events: CombatEvent[] } {
-  const events: CombatEvent[] = []
-  let current = state
-  const target = state.tick + ticks
-  while (current.tick < target && current.status === 'ongoing') {
-    const commands: PlayerCommand[] = isPlayerTurn(current) ? [{ type: 'wait' }] : []
-    const result = step(content, current, commands)
-    current = result.state
-    events.push(...result.events)
-  }
-  return { state: current, events }
-}
-
-export function cast(slot: number): PlayerCommand {
-  return { type: 'cast', slot }
+/** A fresh duel whose hand is exactly `hand` (draw pile keeps the shuffled deck). */
+export function duelWithHand(content: DuelContent, hand: string[], seed = 1): DuelState {
+  const state = createDuel(content, seed)
+  state.player.hand = hand.map((wordId, i) => ({ uid: 100 + i, wordId }))
+  return state
 }

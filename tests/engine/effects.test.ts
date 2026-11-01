@@ -1,145 +1,147 @@
+// Every effect kind and status, exercised through real player actions.
+
 import { describe, expect, it } from 'vitest'
-import { MAX_HAND_SIZE, type CombatContent, type Effect } from '../../src/engine/index.ts'
-import { TEST_SPELLS, advance, cast, makeCombat, makeContent, run } from './fixtures.ts'
+import { MAX_HAND_SIZE, act } from '../../src/engine/index.ts'
+import { duelWithHand, makeContent } from './fixtures.ts'
 
-/** Content whose whole grimoire is one test spell with the given effects. */
-function contentWith(effects: Effect[], grimoire = ['probe', 'probe', 'probe', 'probe']) {
-  const base = makeContent({ player: { grimoire } })
-  const content: CombatContent = {
-    ...base,
-    spells: {
-      ...TEST_SPELLS,
-      probe: {
-        id: 'probe',
-        name: 'Probe',
-        type: 'direct',
-        cost: 0,
-        time: 1,
-        tags: [],
-        effects,
-      },
-    },
-  }
-  return content
-}
-
-function castProbe(effects: Effect[]) {
-  const content = contentWith(effects)
-  return run(content, makeCombat(content), 1, [cast(0)])
-}
+/** Rival that never hurts the player: it only wards itself. */
+const quietEnemy = { spells: [{ words: ['ward'] }] }
 
 describe('damage', () => {
-  it('hits the enemy by default', () => {
-    const { state, events } = castProbe([{ kind: 'damage', amount: 6 }])
-    expect(state.enemy.hp).toBe(14)
-    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 6, absorbed: 0 })
+  it('hits the rival', () => {
+    const content = makeContent({ enemy: quietEnemy })
+    const { state, events } = act(content, duelWithHand(content, ['strike']), {
+      type: 'write',
+      words: [0],
+    })
+    expect(state.enemy.hp).toBe(26)
+    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 4, absorbed: 0 })
   })
 
-  it('can target self', () => {
-    const { state } = castProbe([{ kind: 'damage', amount: 4, target: 'self' }])
-    expect(state.player.hp).toBe(26)
-  })
-
-  it('is absorbed by shield first', () => {
-    const { state, events } = castProbe([
-      { kind: 'shield', amount: 4, target: 'enemy' },
-      { kind: 'damage', amount: 6 },
-    ])
-    expect(state.enemy).toMatchObject({ hp: 18, shield: 0 })
-    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 2, absorbed: 4 })
-  })
-
-  it('kills at 0 hp, ends the combat and stops later effects', () => {
-    const { state, events } = castProbe([
-      { kind: 'damage', amount: 50 },
-      { kind: 'heal', amount: 5, target: 'enemy' },
-    ])
-    expect(state.enemy.hp).toBe(0)
+  it('kills at 0 hp, ends the duel and stops everything after', () => {
+    const content = makeContent({ enemy: { maxHp: 4 } })
+    const { state, events } = act(content, duelWithHand(content, ['strike', 'twice']), {
+      type: 'write',
+      words: [0, 1],
+    })
     expect(state.status).toBe('won')
-    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 20, absorbed: 0 })
+    expect(state.enemy.hp).toBe(0)
+    expect(events.filter((event) => event.type === 'damage')).toHaveLength(1)
     expect(events).toContainEqual({ type: 'death', side: 'enemy' })
-    expect(events.some((event) => event.type === 'heal')).toBe(false)
+    expect(events.some((event) => event.type === 'spellWritten' && event.side === 'enemy')).toBe(
+      false,
+    )
   })
 
-  it('killing yourself loses the combat', () => {
-    const { state } = castProbe([{ kind: 'damage', amount: 99, target: 'self' }])
+  it('the player can lose', () => {
+    const content = makeContent({ player: { maxHp: 4 } })
+    const { state } = act(content, duelWithHand(content, ['ward']), { type: 'discard', words: [] })
     expect(state.status).toBe('lost')
   })
 })
 
-describe('heal', () => {
-  it('heals self by default, capped at max hp', () => {
-    const { state, events } = castProbe([
-      { kind: 'damage', amount: 3, target: 'self' },
-      { kind: 'heal', amount: 10 },
-    ])
-    expect(state.player.hp).toBe(30)
-    expect(events).toContainEqual({ type: 'heal', target: 'player', amount: 3 })
+describe('ward (shield)', () => {
+  it('absorbs only the next hit, then the rest is lost', () => {
+    const content = makeContent({ enemy: { spells: [{ words: ['strike', 'twice'] }] } })
+    const { state, events } = act(content, duelWithHand(content, ['ward']), {
+      type: 'write',
+      words: [0],
+    })
+    // Ward 6 absorbs the first Strike (4), then is gone: the second Strike lands in full.
+    expect(events).toContainEqual({ type: 'damage', target: 'player', amount: 0, absorbed: 4 })
+    expect(events).toContainEqual({ type: 'damage', target: 'player', amount: 4, absorbed: 0 })
+    expect(state.player).toMatchObject({ hp: 26, ward: 0 })
+  })
+
+  it('stays up until a hit comes', () => {
+    const content = makeContent({ enemy: quietEnemy })
+    const { state } = act(content, duelWithHand(content, ['ward']), { type: 'write', words: [0] })
+    expect(state.player.ward).toBe(6)
   })
 })
 
-describe('shield (ward)', () => {
-  it('shields self by default and stacks', () => {
-    const { state } = castProbe([
-      { kind: 'shield', amount: 4 },
-      { kind: 'shield', amount: 3 },
-    ])
-    expect(state.player.shield).toBe(7)
+describe('heal', () => {
+  it('heals, capped at max hp', () => {
+    const content = makeContent()
+    const start = duelWithHand(content, ['mend'])
+    start.player.hp = 28
+    const { state, events } = act(content, start, { type: 'write', words: [0] })
+    expect(events).toContainEqual({ type: 'heal', target: 'player', amount: 2 })
+    expect(state.player.hp).toBe(30 - 4) // then the rival's Strike lands
   })
+})
 
-  it('absorbs only the next hit: the rest of the ward is lost', () => {
-    const { state, events } = castProbe([
-      { kind: 'shield', amount: 10, target: 'enemy' },
-      { kind: 'damage', amount: 3 },
-      { kind: 'damage', amount: 3 },
-    ])
-    expect(state.enemy).toMatchObject({ hp: 17, shield: 0 })
-    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 0, absorbed: 3 })
-    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 3, absorbed: 0 })
+describe('burn (applyStatus)', () => {
+  it('applies stacks, burns at the start of the victim turn through wards, then fades', () => {
+    const content = makeContent({ enemy: { spells: [{ words: ['ward'] }] } })
+    const start = duelWithHand(content, ['fire', 'strike', 'mend', 'mend'])
+    start.enemy.ward = 10
+
+    const first = act(content, start, { type: 'write', words: [0, 1] })
+    expect(first.events).toContainEqual({
+      type: 'statusApplied',
+      target: 'enemy',
+      status: 'burn',
+      stacks: 2,
+    })
+    // Strike hit the ward; burn then ticks for 2 at the start of the rival turn, ignoring wards.
+    expect(first.events).toContainEqual({
+      type: 'damage',
+      target: 'enemy',
+      amount: 2,
+      absorbed: 0,
+      source: 'burn',
+    })
+    expect(first.state.enemy).toMatchObject({ hp: 28, statuses: { burn: 1, chill: 0 } })
+
+    const second = act(content, first.state, { type: 'discard', words: [] })
+    expect(second.state.enemy).toMatchObject({ hp: 27, statuses: { burn: 0, chill: 0 } })
+  })
+})
+
+describe('chill (applyStatus)', () => {
+  it("weakens each hit of the victim's next spell, then clears", () => {
+    const content = makeContent({ enemy: { spells: [{ words: ['strike', 'twice'] }] } })
+    const first = act(content, duelWithHand(content, ['ice', 'strike']), {
+      type: 'write',
+      words: [0, 1],
+    })
+    // Rival's two Strikes of 4 are chilled by 3: 1 + 1.
+    expect(first.state.player.hp).toBe(28)
+    expect(first.state.enemy.statuses.chill).toBe(0)
+
+    const second = act(content, first.state, { type: 'discard', words: [] })
+    expect(second.state.player.hp).toBe(20)
   })
 })
 
 describe('draw', () => {
-  it('adds pages to the end of the hand', () => {
-    const content = contentWith([{ kind: 'draw', count: 2 }])
-    const state = makeCombat(content)
-    state.player.hand = [
-      { uid: 0, spellId: 'probe' },
-      { uid: 1, spellId: 'bolt' },
-    ]
-    state.player.drawPile = [
-      { uid: 2, spellId: 'bolt' },
-      { uid: 3, spellId: 'bolt' },
-      { uid: 4, spellId: 'bolt' },
-    ]
-
-    const { state: after, events } = run(content, state, 1, [cast(0)])
-    // The probe is replaced by uid 2, then draw 2 adds uids 3 and 4.
-    expect(after.player.hand.map((card) => card.uid)).toEqual([2, 1, 3, 4])
-    expect(events.filter((event) => event.type === 'cardDrawn')).toEqual([
-      { type: 'cardDrawn', slot: 0, spellId: 'bolt' },
-      { type: 'cardDrawn', slot: 2, spellId: 'bolt' },
-      { type: 'cardDrawn', slot: 3, spellId: 'bolt' },
-    ])
+  it('adds words to the hand during the turn', () => {
+    const content = makeContent({ player: { handSize: 2 }, enemy: quietEnemy })
+    const start = duelWithHand(content, ['arcane', 'strike', 'mend'])
+    const { state, events } = act(content, start, { type: 'write', words: [0, 1] })
+    // Hand: mend + 1 drawn by Arcane = 2, so refilling to 2 draws nothing more.
+    expect(state.player.hand).toHaveLength(2)
+    expect(events.filter((event) => event.type === 'wordDrawn')).toHaveLength(1)
   })
 
-  it('never grows the hand above MAX_HAND_SIZE', () => {
-    const content = contentWith([{ kind: 'draw', count: 20 }], Array(30).fill('probe'))
-    const { state } = run(content, makeCombat(content), 1, [cast(0)])
-    expect(state.player.hand).toHaveLength(MAX_HAND_SIZE)
-  })
-
-  it('does nothing for the enemy', () => {
+  it(`never grows the hand above ${MAX_HAND_SIZE}`, () => {
     const content = makeContent({
-      enemy: {
-        openingDelay: 0,
-        spells: [
-          { id: 'think', name: 'Think', castTime: 0.05, effects: [{ kind: 'draw', count: 2 }] },
-        ],
-      },
+      player: { deck: Array(30).fill('strike') },
+      enemy: quietEnemy,
     })
-    const start = makeCombat(content)
-    const { state } = advance(content, start, 3)
-    expect(state.player.hand).toEqual(start.player.hand)
+    const start = duelWithHand(content, ['arcane', 'strike', ...Array(MAX_HAND_SIZE).fill('mend')])
+    const { state } = act(content, start, { type: 'write', words: [0, 1] })
+    expect(state.player.hand.length).toBeLessThanOrEqual(MAX_HAND_SIZE)
+  })
+
+  it('does nothing for the rival', () => {
+    const content = makeContent({
+      enemy: { spells: [{ words: ['strike', 'arcane'] }] },
+    })
+    const start = duelWithHand(content, ['mend'])
+    const { events } = act(content, start, { type: 'write', words: [0] })
+    // Only the player's refill draws happen (hand back to 4).
+    expect(events.filter((event) => event.type === 'wordDrawn')).toHaveLength(4)
   })
 })

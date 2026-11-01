@@ -1,124 +1,116 @@
 import type { CombatEvent } from './events.ts'
 import { seedRng, shuffle, type RngState } from './rng.ts'
-import { durationTicks, secondsToTicks } from './time.ts'
-import type { CombatContent, Side, SpellDef } from './types.ts'
+import type { DuelContent, Side, StatusId, WordDef } from './types.ts'
 
-export interface CardInstance {
-  /** Unique within a combat; stable key for the UI. */
+export interface WordCard {
+  /** Unique within a duel; stable key for the UI. */
   uid: number
-  spellId: string
+  wordId: string
 }
 
-export interface Combatant {
+export type Statuses = Record<StatusId, number>
+
+export interface Fighter {
   hp: number
   maxHp: number
   /** Absorbs the next hit only; whatever is left after that hit is lost. */
-  shield: number
+  ward: number
+  statuses: Statuses
 }
 
-export interface PlayerState extends Combatant {
-  ink: number
-  maxInk: number
-  /** Ticks accumulated towards the next point of ink. */
-  inkProgress: number
-  ticksPerInk: number
-  /** Tick at which the player's next turn starts. Time freezes there until they act. */
-  readyAt: number
-  hand: CardInstance[]
-  drawPile: CardInstance[]
-  discardPile: CardInstance[]
+export interface PlayerState extends Fighter {
+  hand: WordCard[]
+  drawPile: WordCard[]
+  discardPile: WordCard[]
 }
 
-export interface EnemyCast {
-  spellIndex: number
-  totalTicks: number
-  remainingTicks: number
+export interface IntentWord {
+  wordId: string
+  /** Struck out by the player's Erase: it will not be cast. */
+  erased: boolean
 }
 
-export interface EnemyState extends Combatant {
-  /** The telegraphed cast in progress, if any. */
-  cast: EnemyCast | null
-  /** Ticks left before the next cast starts. */
-  idleTicks: number
-  /** Number of casts started so far; drives the 'rotation' behaviour. */
-  castsStarted: number
+export interface EnemyState extends Fighter {
+  /** The sentence the rival will cast on its next turn, shown to the player. */
+  intent: IntentWord[]
+  /** Spells cast so far; drives the 'rotation' behaviour. */
+  spellsCast: number
 }
 
-export type CombatStatus = 'ongoing' | 'won' | 'lost'
+export type DuelStatus = 'ongoing' | 'won' | 'lost'
 
-/** Plain, serializable data. Definitions live in CombatContent, not here. */
-export interface CombatState {
-  tick: number
+/** Plain, serializable data. Definitions live in DuelContent, not here. */
+export interface DuelState {
+  round: number
   rng: RngState
-  status: CombatStatus
+  status: DuelStatus
   player: PlayerState
   enemy: EnemyState
 }
 
-/** Mutable working set for one step: a private clone of the state plus the events emitted. */
-export interface StepContext {
-  content: CombatContent
-  state: CombatState
+/** Mutable working set for one action: a private clone of the state plus the events emitted. */
+export interface ActionContext {
+  content: DuelContent
+  state: DuelState
   events: CombatEvent[]
 }
 
+export const NO_STATUSES: Statuses = { burn: 0, chill: 0 }
+
 /**
- * Copies every mutable part of the state, so step() can work on the copy.
- * CardInstances are shared: they are moved between piles but never modified.
+ * Copies every mutable part of the state, so an action can work on the copy.
+ * WordCards are shared: they are moved between piles but never modified.
  * Update this when adding nested state (a frozen-input test guards it).
  */
-export function cloneState(state: CombatState): CombatState {
+export function cloneState(state: DuelState): DuelState {
   const { player, enemy } = state
   return {
     ...state,
     player: {
       ...player,
+      statuses: { ...player.statuses },
       hand: [...player.hand],
       drawPile: [...player.drawPile],
       discardPile: [...player.discardPile],
     },
-    enemy: { ...enemy, cast: enemy.cast && { ...enemy.cast } },
+    enemy: {
+      ...enemy,
+      statuses: { ...enemy.statuses },
+      intent: enemy.intent.map((word) => ({ ...word })),
+    },
   }
 }
 
-/** True when time is frozen waiting for the player's command. */
-export function isPlayerTurn(state: CombatState): boolean {
-  return state.status === 'ongoing' && state.tick >= state.player.readyAt
+export function getWord(content: DuelContent, wordId: string): WordDef {
+  const word = content.words[wordId]
+  if (!word) throw new Error(`Unknown word id: ${wordId}`)
+  return word
 }
 
-export function getSpell(content: CombatContent, spellId: string): SpellDef {
-  const spell = content.spells[spellId]
-  if (!spell) throw new Error(`Unknown spell id: ${spellId}`)
-  return spell
-}
-
-export function getCombatant(state: CombatState, side: Side): Combatant {
+export function getFighter(state: DuelState, side: Side): Fighter {
   return side === 'player' ? state.player : state.enemy
 }
 
-export function createCombat(content: CombatContent, seed: number): CombatState {
+/** Builds the opening state. The rival's first intent is chosen by createDuel in duel.ts. */
+export function createInitialState(content: DuelContent, seed: number): DuelState {
   const { player, enemy } = content
   if (enemy.spells.length === 0) throw new Error(`Enemy ${enemy.id} has no spells`)
 
-  const cards = player.grimoire.map((spellId, uid) => {
-    getSpell(content, spellId)
-    return { uid, spellId }
+  const cards = player.deck.map((wordId, uid) => {
+    getWord(content, wordId)
+    return { uid, wordId }
   })
   const [deck, rng] = shuffle(cards, seedRng(seed))
 
   return {
-    tick: 0,
+    round: 1,
     rng,
     status: 'ongoing',
     player: {
       hp: player.maxHp,
       maxHp: player.maxHp,
-      shield: 0,
-      ink: Math.min(player.startingInk, player.maxInk),
-      maxInk: player.maxInk,
-      inkProgress: 0,
-      ticksPerInk: durationTicks(1 / player.inkPerSecond),
-      readyAt: 0,
+      ward: 0,
+      statuses: { ...NO_STATUSES },
       hand: deck.slice(0, player.handSize),
       drawPile: deck.slice(player.handSize),
       discardPile: [],
@@ -126,10 +118,10 @@ export function createCombat(content: CombatContent, seed: number): CombatState 
     enemy: {
       hp: enemy.maxHp,
       maxHp: enemy.maxHp,
-      shield: 0,
-      cast: null,
-      idleTicks: secondsToTicks(enemy.openingDelay ?? enemy.castGap),
-      castsStarted: 0,
+      ward: 0,
+      statuses: { ...NO_STATUSES },
+      intent: [],
+      spellsCast: 0,
     },
   }
 }

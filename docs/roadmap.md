@@ -6,7 +6,7 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 | ---- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [x]  | 0. Foundations                 | Vite + TS + React + Vitest, lint, CI, deploy-on-push                                                                    | "Hello world" live on a public URL                                          |
 | [x]  | 1. Combat engine (no graphics) | Tick loop, ink regen, hand/draw/discard/cooldown, effects (`damage`, `shield`, `heal`, `draw`), enemy AI, debug harness | A full duel runs in tests; a bot plays 1,000 seeded fights without crashing |
-| [ ]  | 2. Playable combat UI          | Hand, ink bar, health bars, cast bars, timeline, telegraphs, click/drag casting                                         | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
+| [ ]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
 | [ ]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
 | [ ]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
 | [ ]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
@@ -49,4 +49,8 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 - [x] Timeline turns: engine (`readyAt`, `time` cost, `wait`), wards absorb only the next hit, `forecastEnemy`
 - [x] Timeline strip, per-page hints ("lands first" / "next hit"), gather ink, fast time; pause and slow removed
 - [x] Balance pass for timeline turns
-- [ ] **Playtest 2: is one duel fun?** This is the "done when"; stop here
+- [x] Playtest 2: not fun; the timeline made it worse. The user chose "writing spells" as the core fun
+- [x] Spellwriting v0 engine: words (verb / modifier / ink / edit), `composeSpell`, alternating turns, Burn and Chill, Erase on the rival's intent
+- [x] Spellwriting UI: rival sentence with live preview, 3-slot writing desk, word pages, discard and pass, log, floaters
+- [x] Balance pass: the bot wins about 87% vs Ash Adept and 94% vs Frost Scribe, in 9-12 rounds, ending around 19/50 HP
+- [ ] **Playtest 3: is writing spells fun?** This is the "done when"; stop here

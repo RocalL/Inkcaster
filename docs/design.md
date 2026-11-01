@@ -12,23 +12,26 @@ Inkcaster is a solo, browser-based **roguelite deckbuilder** with **die-and-retr
 4. Whether you win or die, you earn gold: more for deeper progress, a small consolation on death.
 5. Spend gold in the **Scriptorium** (the hub) on permanent progression, then start a new run.
 
-## Combat: timeline turns
+## Combat: spellwriting (v0)
 
-Decided after the first playtest (2026-11-01). Real time rewarded click speed over decisions.
+Decided 2026-11-01 after two playtests. Real time was a click race, and timeline turns added reading for little payoff. The chosen fun is **writing your own spells**.
 
-- **Time only moves when you act.** On your turn the clock is frozen. You cast one page or **gather ink** (1s).
-- **Every page has a time cost.** After casting, your next turn comes that many seconds later. Fast weak pages and slow strong pages are a real trade-off.
-- **One shared timeline.** Rival inkcasters cast on it with a **telegraphed cast bar**. The screen shows when each rival spell lands, and where your next turn would fall for each page.
-- **Ink** regenerates with timeline time, not per turn. Scarce ink plus time costs means you can't cast everything.
-- **The hand** holds 5 pages. A cast page is discarded and replaced immediately, so holding pages is free. `draw` grows the hand up to 7.
-- **Wards absorb only the next hit.** Whatever is left is lost, and this applies to rivals too. Timing a ward against the right spell, and breaking a rival's ward with a small hit before a big one, are core decisions.
-- Rivals with a fixed rotation are fully predictable on the timeline. Weighted rivals only reveal a spell when its cast bar starts.
-- Later (Phase 3): minions and enchantments act on the timeline; counters and interrupts cancel or delay rival casts.
-- Deliberately unlike Slay the Spire: no energy refill per turn, no discard-hand-at-end-of-turn, no block that resets every turn. Tempo is about time, not turns.
+- **Words are the pages.** Every page in the grimoire is a word of one of four kinds:
+  - **Verb**: what the spell does (Strike: deal 4; Ward: ward 6; Mend: heal 5; Drain: deal 3, heal 2).
+  - **Modifier**: reshapes it (Greater: +3 to the verb's numbers; Twice: cast the whole spell twice).
+  - **Ink**: adds an element (Fire: Burn 2; Ice: Chill 3; Arcane: draw a word).
+  - **Edit**: changes the rival's next spell (Erase: strike out one of its words, not the verb).
+- **Each turn you write one spell**: exactly one verb plus up to two other words (3 words max). Or discard any words and pass. Unused words stay in hand, and the hand refills to 6 after your turn.
+- **Alternating turns, no clock.** You write, then the rival casts the sentence shown above it, then the rival reveals its next sentence.
+- **Rivals write with the same words**, so their intent reads like a spell and Erase works on it. Rivals may use sentences longer than three words; their big sentences are the moments to Erase.
+- **Statuses:** Burn deals its stacks at the start of the victim's turn, through wards, then drops by 1. Chill lowers each hit of the victim's next spell, then clears.
+- **Wards absorb only the next hit**, then fade, on both sides.
+- Word order does not matter in v0. Ordering rules ("the last word is emphasised", etc.) are a candidate for later.
+- Deliberately unlike Slay the Spire: no energy, no playing cards one by one, no block reset. The unit of play is the sentence you compose.
 
-## Spell types
+## Word kinds
 
-Direct spells, enchantments (persistent buffs and auras), minions (summons with attack timers), wards and shields, counters and interrupts, utility (draw, gain ink).
+Verbs, modifiers, inks (elements) and edits (rewrite the rival). Planned later: more statuses, words that summon minions or set lasting enchantments, edits beyond Erase (Swap, Smudge...).
 
 ## Archetypes (target: 5 for v1)
 
@@ -46,7 +49,7 @@ Fire burst, Ice control, Minion swarm, Arcane/combo, Ward/defence.
 | Concept  | Term             |
 | -------- | ---------------- |
 | Mana     | Ink              |
-| Card     | Spell / Page     |
+| Card     | Word / Page      |
 | Deck     | Grimoire / Tome  |
 | Hub      | Scriptorium      |
 | Upgrade  | Rewrite          |
@@ -55,27 +58,22 @@ Fire burst, Ice control, Minion swarm, Arcane/combo, Ward/defence.
 
 Visual direction: ink black and deep indigo on aged parchment, with one accent ink color per element (fire = red, ice = blue, arcane = violet). On death, pages burn or blur.
 
-## Card data shape
+## Word data shape
 
-Reference only; the real types will live in `src/engine` and `src/data`.
+The real types are in `src/engine/types.ts`.
 
 ```ts
-{
-  id: "ember_bolt",
-  name: "Ember Bolt",
-  type: "direct",            // direct | enchantment | minion | ward | counter | utility
-  cost: 2,                   // ink
-  time: 1.25,                // timeline cost in seconds
-  tags: ["fire"],
-  effects: [{ kind: "damage", amount: 6, target: "enemy" }],
-  upgrades: [
-    { tier: 2, effects: [{ kind: "damage", amount: 9 }] },
-    { tier: 3, effects: [{ kind: "damage", amount: 12 }, { kind: "applyStatus", status: "burn", stacks: 2 }] }
-  ]
-}
+{ id: "strike",  name: "Strike",  kind: "verb",     effects: [{ kind: "damage", amount: 4 }] }
+{ id: "twice",   name: "Twice",   kind: "modifier", modifier: { type: "repeat", times: 2 } }
+{ id: "greater", name: "Greater", kind: "modifier", modifier: { type: "amplify", amount: 3 } }
+{ id: "fire",    name: "Fire",    kind: "ink", element: "fire",
+  effects: [{ kind: "applyStatus", status: "burn", stacks: 2 }] }
+{ id: "erase",   name: "Erase",   kind: "edit", edit: "erase" }
 ```
 
-Effects: `damage`, `heal`, `shield`, `applyStatus`, `summon`, `draw`, `gainInk`, `counter`, `modifyNextCard`. Triggers: `onPlay`, `onTick`, `onDeath`, `onHit`. Keep this vocabulary small and composable, so that synergies emerge from combinations.
+Rivals are data too: `{ id, name, maxHp, behaviour: "rotation" | "weighted", spells: [{ words: ["fire", "strike"], weight? }] }`.
+
+Effects: `damage`, `heal`, `shield`, `applyStatus`, `draw`. Keep this vocabulary small and composable, so that synergies emerge from combinations.
 
 ## v1 content targets
 

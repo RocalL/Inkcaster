@@ -1,41 +1,55 @@
 // Content definitions: the shapes that /data fills in. The engine never imports /data;
-// content is passed in through CombatContent.
+// content is passed in through DuelContent.
 
 export type Side = 'player' | 'enemy'
 
 /** Who an effect hits, relative to the caster: 'enemy' is the caster's opponent. */
 export type EffectTarget = 'self' | 'enemy'
 
+export type StatusId = 'burn' | 'chill'
+
 export type Effect =
   | { kind: 'damage'; amount: number; target?: EffectTarget } // default: enemy
   | { kind: 'heal'; amount: number; target?: EffectTarget } // default: self
   | { kind: 'shield'; amount: number; target?: EffectTarget } // default: self
-  | { kind: 'draw'; count: number } // player only: adds pages to the hand, up to MAX_HAND_SIZE
+  | { kind: 'applyStatus'; status: StatusId; stacks: number; target?: EffectTarget } // default: enemy
+  | { kind: 'draw'; count: number } // player only
 
 export type EffectKind = Effect['kind']
 
-export type SpellType = 'direct' | 'enchantment' | 'minion' | 'ward' | 'counter' | 'utility'
+export type Modifier =
+  /** The whole spell is cast this many times. */
+  | { type: 'repeat'; times: number }
+  /** Adds to every damage, shield and heal number of the verb. */
+  | { type: 'amplify'; amount: number }
 
-export interface SpellDef {
+export type EditKind = 'erase'
+
+interface WordBase {
   id: string
   name: string
-  type: SpellType
-  /** Ink cost. */
-  cost: number
-  /** Timeline cost: seconds that pass before the caster's next turn. */
-  time: number
-  tags: readonly string[]
-  effects: readonly Effect[]
 }
 
+/**
+ * A word page. A spell is written from exactly one verb plus a few other words:
+ * - verb: what the spell does
+ * - modifier: reshapes the verb's numbers or repeats the spell
+ * - ink: an element that adds its own effects
+ * - edit: changes the rival's next sentence instead of adding effects
+ */
+export type WordDef =
+  | (WordBase & { kind: 'verb'; effects: readonly Effect[] })
+  | (WordBase & { kind: 'modifier'; modifier: Modifier })
+  | (WordBase & { kind: 'ink'; element: string; effects: readonly Effect[] })
+  | (WordBase & { kind: 'edit'; edit: EditKind })
+
+export type WordKind = WordDef['kind']
+
 export interface EnemySpellDef {
-  id: string
-  name: string
-  /** Seconds of telegraphed cast bar before the effects resolve. */
-  castTime: number
+  /** Word ids, written by the rival exactly like the player's spells. */
+  words: readonly string[]
   /** Relative pick chance for the 'weighted' behaviour. Defaults to 1. */
   weight?: number
-  effects: readonly Effect[]
 }
 
 /** 'rotation' casts spells in list order; 'weighted' picks with the seeded RNG. */
@@ -46,27 +60,21 @@ export interface EnemyDef {
   name: string
   maxHp: number
   behaviour: EnemyBehaviour
-  /** Seconds of idle between the end of one cast and the start of the next. */
-  castGap: number
-  /** Seconds before the first cast. Defaults to castGap. */
-  openingDelay?: number
   spells: readonly EnemySpellDef[]
 }
 
 export interface PlayerSetup {
   maxHp: number
-  maxInk: number
-  startingInk: number
-  /** Ink regenerated per second. */
-  inkPerSecond: number
-  /** Pages in hand at the start; casting refills back up to this. */
+  /** The hand is refilled to this size after each of your turns. */
   handSize: number
-  /** Spell ids; duplicates allowed. */
-  grimoire: readonly string[]
+  /** Most words in one spell, verb included. */
+  maxWords: number
+  /** Word ids; duplicates allowed. */
+  deck: readonly string[]
 }
 
-export interface CombatContent {
-  spells: Readonly<Record<string, SpellDef>>
+export interface DuelContent {
+  words: Readonly<Record<string, WordDef>>
   player: PlayerSetup
   enemy: EnemyDef
 }

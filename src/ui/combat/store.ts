@@ -1,178 +1,183 @@
-// UI-side combat store. It plays the timeline in real time between the player's turns and
-// feeds commands into the pure engine; components only read from it and call its actions.
-// No game rules live here.
+// UI-side duel store. It holds what the player is writing and feeds commands into the
+// pure engine; components only read from it and call its actions. No game rules live here.
 
 import { create } from 'zustand'
 import { starterDuel } from '../../data/index.ts'
 import {
-  advanceClock,
-  createCombat,
-  isPlayerTurn,
-  step,
-  type CombatContent,
+  act,
+  createDuel,
+  getWord,
   type CombatEvent,
-  type CombatState,
+  type DuelContent,
+  type DuelState,
   type PlayerCommand,
+  type RejectReason,
   type Side,
 } from '../../engine/index.ts'
 import { describeEvent } from '../text.ts'
 
-export type FloaterKind = 'damage' | 'blocked' | 'heal' | 'shield'
+export type FloaterKind = 'damage' | 'burn' | 'warded' | 'heal' | 'ward'
 
 export interface Floater {
   id: number
   side: Side
   kind: FloaterKind
   amount: number
-  /** Real-time ms (see `clockMs`) when it appeared. */
-  bornAt: number
+  /** Order within the action, so hits appear one after another. */
+  order: number
 }
 
 export interface LogLine {
   id: number
   text: string
+  /** The round it happened in, to group lines. */
+  round: number
 }
 
-export const FLOATER_LIFETIME_MS = 1100
-const LOG_LENGTH = 8
-/** How fast the timeline plays between turns. */
-export const FLOW_SPEEDS = { normal: 1, fast: 2.5 } as const
-export type FlowSpeed = keyof typeof FLOW_SPEEDS
+const LOG_LENGTH = 14
 
-interface CombatStore {
-  content: CombatContent | null
-  state: CombatState | null
+interface DuelStore {
+  content: DuelContent | null
+  state: DuelState | null
   enemyId: string | null
-  flow: FlowSpeed
-  accumulatorMs: number
-  /** Real time since the duel started. Drives UI animations. */
-  clockMs: number
-  /** The command chosen this turn, sent on the next frame. */
-  queued: PlayerCommand | null
-  /** Hand index the player is hovering, for the timeline preview. */
-  preview: number | null
+  /** Hand indices being written, in order. */
+  selection: number[]
+  /** Rival intent indices chosen for the selected edit words. */
+  eraseTargets: number[]
+  /** Floating numbers from the last action; replaced on every action. */
   floaters: Floater[]
   log: LogLine[]
-  /** Last rejected cast, so the card can shake. `id` changes on every rejection. */
-  rejection: { slot: number; id: number } | null
+  rejection: { reason: RejectReason; id: number } | null
   nextId: number
 
   startDuel: (enemyId: string, seed?: number) => void
   leaveDuel: () => void
-  cast: (slot: number) => void
-  gatherInk: () => void
-  setPreview: (slot: number | null) => void
-  toggleFlow: () => void
-  frame: (elapsedMs: number) => void
+  toggleWord: (handIndex: number) => void
+  toggleErase: (intentIndex: number) => void
+  clearSelection: () => void
+  cast: () => void
+  discardAndPass: () => void
 }
 
 const idle = {
   content: null,
   state: null,
   enemyId: null,
-  accumulatorMs: 0,
-  clockMs: 0,
-  queued: null,
-  preview: null,
+  selection: [],
+  eraseTargets: [],
   floaters: [],
   log: [],
   rejection: null,
   nextId: 0,
 }
 
-export const useCombatStore = create<CombatStore>()((set, get) => {
-  const command = (next: PlayerCommand) => {
-    const { state, queued } = get()
-    if (!state || !isPlayerTurn(state) || queued) return
-    set({ queued: next, preview: null })
+export const useDuelStore = create<DuelStore>()((set, get) => {
+  /** Number of edit words (Erase...) in the current selection. */
+  const editsSelected = (): number => {
+    const { content, state, selection } = get()
+    if (!content || !state) return 0
+    return selection.filter((index) => {
+      const card = state.player.hand[index]
+      return card && getWord(content, card.wordId).kind === 'edit'
+    }).length
+  }
+
+  const send = (command: PlayerCommand) => {
+    const { content, state, nextId: firstId } = get()
+    if (!content || !state || state.status !== 'ongoing') return
+    const result = act(content, state, command)
+    let nextId = firstId
+
+    if (result.state === state) {
+      const rejected = result.events.find((event) => event.type === 'commandRejected')
+      if (rejected) set({ rejection: { reason: rejected.reason, id: nextId++ }, nextId })
+      return
+    }
+
+    const floaters = floatersFor(result.events).map((floater, order) => ({
+      ...floater,
+      order,
+      id: nextId++,
+    }))
+    const lines = result.events.flatMap((event) => {
+      const text = describeEvent(event, content)
+      return text ? [{ id: nextId++, text, round: state.round }] : []
+    })
+    set({
+      state: result.state,
+      selection: [],
+      eraseTargets: [],
+      floaters,
+      log: [...get().log, ...lines].slice(-LOG_LENGTH),
+      rejection: null,
+      nextId,
+    })
   }
 
   return {
     ...idle,
-    flow: 'normal',
 
     startDuel: (enemyId, seed = randomSeed()) => {
       const content = starterDuel(enemyId)
-      set({ ...idle, content, enemyId, state: createCombat(content, seed) })
+      set({ ...idle, content, enemyId, state: createDuel(content, seed) })
     },
 
     leaveDuel: () => set(idle),
-    cast: (slot) => command({ type: 'cast', slot }),
-    gatherInk: () => command({ type: 'wait' }),
-    setPreview: (preview) => set({ preview }),
-    toggleFlow: () => set((store) => ({ flow: store.flow === 'normal' ? 'fast' : 'normal' })),
 
-    frame: (elapsedMs) => {
-      const store = get()
-      const { content } = store
-      let { state } = store
-      if (!content || !state) return
-
-      const clockMs = store.clockMs + elapsedMs
-      const events: CombatEvent[] = []
-      let accumulatorMs = 0
-
-      if (store.queued) {
-        // The turn's command resolves immediately, then the timeline starts flowing.
-        const result = step(content, state, [store.queued])
-        state = result.state
-        events.push(...result.events)
-      } else if (!isPlayerTurn(state) && state.status === 'ongoing') {
-        const clock = advanceClock(store.accumulatorMs, elapsedMs, FLOW_SPEEDS[store.flow])
-        accumulatorMs = clock.accumulatorMs
-        for (let i = 0; i < clock.steps && !isPlayerTurn(state); i++) {
-          const result = step(content, state)
-          state = result.state
-          events.push(...result.events)
-        }
+    toggleWord: (handIndex) => {
+      const { content, state, selection } = get()
+      if (!content || !state || !state.player.hand[handIndex]) return
+      if (selection.includes(handIndex)) {
+        set({ selection: selection.filter((index) => index !== handIndex), rejection: null })
+        // Dropping an edit word may leave too many erase targets.
+        const edits = editsSelected()
+        set((store) => ({ eraseTargets: store.eraseTargets.slice(0, edits) }))
+      } else if (selection.length < content.player.maxWords) {
+        set({ selection: [...selection, handIndex], rejection: null })
       }
-
-      let nextId = store.nextId
-      const floaters = store.floaters.filter((f) => clockMs - f.bornAt < FLOATER_LIFETIME_MS)
-      const log = [...store.log]
-      let rejection = store.rejection
-      for (const event of events) {
-        for (const floater of floatersFor(event)) {
-          floaters.push({ ...floater, id: nextId++, bornAt: clockMs })
-        }
-        if (event.type === 'commandRejected' && event.slot !== undefined) {
-          rejection = { slot: event.slot, id: nextId++ }
-        }
-        const text = event.type === 'cardDrawn' ? null : describeEvent(event, content)
-        if (text) log.push({ id: nextId++, text })
-      }
-
-      set({
-        state,
-        clockMs,
-        accumulatorMs,
-        queued: null,
-        floaters,
-        log: log.slice(-LOG_LENGTH),
-        rejection,
-        nextId,
-      })
     },
+
+    toggleErase: (intentIndex) => {
+      const { eraseTargets } = get()
+      if (eraseTargets.includes(intentIndex)) {
+        set({ eraseTargets: eraseTargets.filter((index) => index !== intentIndex) })
+      } else if (eraseTargets.length < editsSelected()) {
+        set({ eraseTargets: [...eraseTargets, intentIndex] })
+      }
+    },
+
+    clearSelection: () => set({ selection: [], eraseTargets: [], rejection: null }),
+
+    cast: () => {
+      const { selection, eraseTargets } = get()
+      send({ type: 'write', words: selection, erase: eraseTargets })
+    },
+
+    discardAndPass: () => send({ type: 'discard', words: get().selection }),
   }
 })
 
-function floatersFor(event: CombatEvent): Omit<Floater, 'id' | 'bornAt'>[] {
-  switch (event.type) {
-    case 'damage': {
-      const result: Omit<Floater, 'id' | 'bornAt'>[] = []
-      if (event.amount > 0)
-        result.push({ side: event.target, kind: 'damage', amount: event.amount })
-      if (event.absorbed > 0)
-        result.push({ side: event.target, kind: 'blocked', amount: event.absorbed })
-      return result
+function floatersFor(events: CombatEvent[]): Omit<Floater, 'id' | 'order'>[] {
+  return events.flatMap((event): Omit<Floater, 'id' | 'order'>[] => {
+    switch (event.type) {
+      case 'damage': {
+        const result: Omit<Floater, 'id' | 'order'>[] = []
+        if (event.absorbed > 0)
+          result.push({ side: event.target, kind: 'warded', amount: event.absorbed })
+        if (event.amount > 0 || event.absorbed === 0) {
+          const kind = event.source === 'burn' ? 'burn' : 'damage'
+          result.push({ side: event.target, kind, amount: event.amount })
+        }
+        return result
+      }
+      case 'heal':
+        return event.amount > 0 ? [{ side: event.target, kind: 'heal', amount: event.amount }] : []
+      case 'shield':
+        return [{ side: event.target, kind: 'ward', amount: event.amount }]
+      default:
+        return []
     }
-    case 'heal':
-      return event.amount > 0 ? [{ side: event.target, kind: 'heal', amount: event.amount }] : []
-    case 'shield':
-      return [{ side: event.target, kind: 'shield', amount: event.amount }]
-    default:
-      return []
-  }
+  })
 }
 
 /** UI-side randomness is fine: the seed is an input to the deterministic engine. */

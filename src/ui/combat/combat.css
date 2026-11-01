@@ -1,4 +1,4 @@
-.combat {
+.duel {
   position: relative;
   min-height: 100vh;
   max-width: 52rem;
@@ -8,10 +8,9 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   gap: 1rem;
-  user-select: none;
 }
 
-/* Combatants */
+/* Fighters */
 
 .combatant {
   position: relative;
@@ -19,23 +18,39 @@
 
 .combatant-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin-bottom: 0.3rem;
 }
 
 .combatant-name {
   font-size: 1.2rem;
   color: var(--indigo);
+  margin-right: 0.25rem;
 }
 
 .combatant-enemy .combatant-name {
   font-size: 1.5rem;
 }
 
-.shield-badge {
-  color: var(--shield);
+.badge {
+  font-size: 0.85rem;
   font-weight: bold;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  cursor: help;
+}
+
+.badge-ward {
+  color: var(--shield);
+}
+.badge-burn {
+  color: var(--fire);
+}
+.badge-chill {
+  color: var(--ice);
 }
 
 .health-bar {
@@ -50,20 +65,7 @@
 .health-fill {
   height: 100%;
   background: var(--hp);
-  transition: width 120ms linear;
-}
-
-.health-shield {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--shield) 70%, transparent) 0 6px,
-    color-mix(in srgb, var(--shield) 45%, transparent) 6px 12px
-  );
-  transition: width 120ms linear;
+  transition: width 300ms ease-out;
 }
 
 .health-text {
@@ -88,347 +90,253 @@
 .floater {
   position: absolute;
   top: 0.5rem;
-  transform: translateX(-50%);
+  opacity: 0;
   font-size: 1.6rem;
   font-weight: bold;
   text-shadow: 0 0 4px var(--parchment-light);
-  animation-name: float-up;
-  animation-timing-function: ease-out;
-  animation-fill-mode: forwards;
+  animation: float-up 1100ms ease-out both;
 }
 
 .floater-damage {
   color: var(--hp);
 }
-.floater-blocked {
+.floater-burn {
+  color: var(--fire);
+}
+.floater-warded,
+.floater-ward {
   color: var(--shield);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
 }
 .floater-heal {
   color: var(--heal);
 }
-.floater-shield {
-  color: var(--shield);
-}
 
 @keyframes float-up {
-  from {
+  0% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1.2);
+    transform: translate(-50%, 0) scale(1.25);
   }
-  to {
+  100% {
     opacity: 0;
     transform: translate(-50%, -2.5rem) scale(1);
   }
 }
 
-/* Enemy cast bar (telegraph) */
+/* Rival intent: the sentence it will cast next */
 
-.cast-bar {
-  position: relative;
+.intent {
   margin-top: 0.75rem;
-  min-height: 3rem;
-  padding: 0.4rem 0.8rem;
+  padding: 0.6rem 0.8rem;
   border: 2px solid var(--indigo);
   border-radius: 6px;
   background: var(--parchment-light);
-  overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 1rem;
+  gap: 0.35rem;
 }
 
-.cast-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: color-mix(in srgb, var(--indigo) 22%, transparent);
-  transition: width 60ms linear;
-}
-
-.cast-bar-heavy {
-  border-color: var(--fire);
-  animation: pulse 0.8s ease-in-out infinite alternate;
-}
-
-.cast-bar-heavy .cast-fill {
-  background: color-mix(in srgb, var(--fire) 28%, transparent);
-}
-
-.cast-bar-idle {
+.intent.erasing {
   border-style: dashed;
-  color: var(--ink-soft);
-  font-style: italic;
+  border-color: var(--arcane);
 }
 
-.cast-name {
-  position: relative;
+.intent-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+}
+
+.intent-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.intent-word {
+  --accent: var(--ink);
+  font-size: 1.15rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+
+.intent-word:disabled {
+  opacity: 1;
+}
+
+.intent-word:not(:disabled) {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--arcane) 35%, transparent);
+}
+
+.intent-word.struck {
+  text-decoration: line-through 3px var(--ink);
+  opacity: 0.45;
+}
+
+.intent-effect {
   font-weight: bold;
 }
 
-.cast-effect {
-  position: relative;
-  grid-row: 2;
-  font-size: 0.9rem;
-}
-
-.cast-time {
-  position: relative;
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.2rem;
-}
-
-@keyframes pulse {
-  from {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--fire) 40%, transparent);
-  }
-  to {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--fire) 0%, transparent);
-  }
+.intent-hint {
+  font-size: 0.85rem;
+  color: var(--arcane);
 }
 
 /* Log */
 
-.combat-log {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.duel-log {
   align-self: end;
   font-size: 0.85rem;
   color: var(--ink-soft);
+}
+
+.duel-log .round {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.duel-log ol {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  max-height: 9.5rem;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
 }
 
-.combat-log li:not(:last-child) {
-  opacity: 0.6;
+.duel-log li {
+  opacity: 0.55;
 }
 
-/* Player area */
+.duel-log li.recent {
+  opacity: 1;
+  color: var(--ink);
+}
 
-.player-row {
+/* Writing desk */
+
+.desk {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--parchment-light) 70%, transparent);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  align-items: end;
-}
-
-.inkwell-label {
-  display: block;
-  font-size: 0.85rem;
-  margin-bottom: 0.25rem;
-  text-align: right;
-}
-
-.inkwell-pips {
-  display: flex;
-  gap: 3px;
-}
-
-.ink-pip {
-  position: relative;
-  width: 0.9rem;
-  height: 1.4rem;
-  border: 2px solid var(--ink);
-  border-radius: 0 0 0.45rem 0.45rem;
-  background: var(--parchment-light);
-  overflow: hidden;
-}
-
-.ink-pip-fill {
-  position: absolute;
-  inset: auto 0 0 0;
-  background: var(--ink-fill);
-}
-
-/* Hand */
-
-.hand {
-  margin-top: 0.4rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   gap: 0.6rem;
 }
 
-.turn-banner {
-  margin: 0.8rem 0 0;
-  min-height: 1.3em;
-  text-align: center;
-  font-style: italic;
-  color: var(--ink-soft);
+.desk-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
-.your-turn .turn-banner {
-  font-style: normal;
+.desk-slot {
+  min-height: 6.5rem;
+  border: 2px dashed var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-content: center;
+  color: var(--line);
+  font-style: italic;
+}
+
+.desk-preview {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
   font-weight: bold;
   color: var(--indigo);
 }
 
-.combat-middle {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-/* Timeline */
-
-.timeline {
-  margin: 0.5rem 0.5rem 0 0.5rem;
-}
-
-.timeline-track {
-  position: relative;
-  height: 4.5rem;
-  border-bottom: 2px solid var(--ink);
-}
-
-.timeline-now {
-  position: absolute;
-  left: 0;
-  bottom: -6px;
-  width: 2px;
-  height: calc(100% + 6px);
-  background: var(--indigo);
-}
-
-.timeline-cast {
-  position: absolute;
-  bottom: 0;
-  height: 0.5rem;
-  background: color-mix(in srgb, var(--indigo) 25%, transparent);
-}
-
-.timeline-marker {
-  position: absolute;
-  bottom: 0;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.timeline-marker::after {
-  content: '';
-  width: 0.8rem;
-  height: 0.8rem;
-  margin-bottom: -0.45rem;
-  border-radius: 50%;
-  background: var(--indigo);
-  border: 2px solid var(--parchment-light);
-}
-
-.timeline-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 0.4rem;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.timeline-label small {
-  font-size: 0.7rem;
+.desk-preview.invalid {
   color: var(--ink-soft);
+  font-weight: normal;
+  font-style: italic;
 }
 
-.timeline-enemy.harmful::after {
-  background: var(--fire);
-}
-
-.timeline-enemy.harmful .timeline-label {
+.desk-error {
+  margin: 0;
+  text-align: center;
   color: var(--fire);
+}
+
+.desk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+button.primary {
+  background: var(--indigo);
+  color: var(--parchment-light);
   font-weight: bold;
 }
 
-.timeline-you {
-  top: calc(100% + 0.2rem);
-  bottom: auto;
-  flex-direction: column-reverse;
+button.primary:hover:not(:disabled) {
+  background: var(--indigo-soft);
 }
 
-.timeline-you::after {
-  margin: -0.85rem 0 0;
-  background: var(--heal);
+button:disabled {
+  opacity: 0.45;
 }
 
-.timeline-you .timeline-label {
-  margin: 0.3rem 0 0;
-  color: var(--heal);
-  font-weight: bold;
+/* Words */
+
+.hand {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.8rem, 1fr));
+  gap: 0.5rem;
 }
 
-.timeline-ghost {
-  opacity: 0.75;
-}
-
-.timeline-unknown .timeline-label {
-  font-size: 1rem;
-  color: var(--ink-soft);
-}
-
-.timeline-scale {
+.word {
+  --accent: var(--ink);
   position: relative;
-  height: 2.6rem;
-  font-size: 0.65rem;
-  color: var(--ink-soft);
-}
-
-.timeline-scale span {
-  position: absolute;
-  top: 1.7rem;
-  transform: translateX(-50%);
-}
-
-.spell-card {
-  --accent: var(--neutral);
-  position: relative;
-  min-height: 10rem;
-  padding: 0.6rem 0.5rem 0.5rem;
+  min-height: 6.5rem;
+  padding: 0.5rem 0.4rem;
   border: 2px solid var(--accent);
-  border-top-width: 6px;
   border-radius: 8px;
   background: var(--parchment-light);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.15rem;
   text-align: center;
-  touch-action: none;
   transition:
     transform 120ms ease-out,
-    opacity 120ms;
+    box-shadow 120ms;
 }
 
-.spell-card:hover:not(:disabled) {
-  transform: translateY(-4px);
+.word:hover:not(:disabled) {
+  transform: translateY(-3px);
 }
 
-.spell-card.dragging {
-  transition: none;
-  z-index: 2;
-  box-shadow: 0 8px 18px rgb(0 0 0 / 25%);
+.word.selected {
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
-.spell-card.armed {
-  outline: 3px solid var(--accent);
+.word:disabled {
+  opacity: 0.4;
 }
 
-.spell-card.unaffordable {
-  opacity: 0.55;
+.kind-verb {
+  --accent: var(--ink);
 }
-
-.spell-card.unaffordable .spell-cost {
-  background: var(--neutral);
+.kind-modifier {
+  --accent: var(--indigo-soft);
 }
-
-.spell-card.shake {
-  animation: shake 300ms;
+.kind-edit {
+  --accent: var(--neutral);
+  border-style: dashed;
 }
-
 .element-fire {
   --accent: var(--fire);
 }
@@ -438,59 +346,27 @@
 .element-arcane {
   --accent: var(--arcane);
 }
-.element-ward {
-  --accent: var(--ward);
-}
 
-.spell-cost {
-  position: absolute;
-  top: -0.8rem;
-  left: -0.6rem;
-  width: 1.8rem;
-  height: 1.8rem;
-  border-radius: 50%;
-  display: grid;
-  place-content: center;
-  background: var(--ink-fill);
-  color: #fff;
-  font-weight: bold;
-}
-
-.spell-name {
-  font-size: 1.05rem;
+.word-name {
+  font-size: 1.15rem;
   font-weight: bold;
   color: var(--accent);
 }
 
-.spell-type {
-  font-size: 0.7rem;
+.kind-verb .word-name {
+  font-size: 1.25rem;
+}
+
+.word-kind {
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--ink-soft);
 }
 
-.spell-text {
-  flex: 1;
-  font-size: 0.85rem;
-}
-
-.spell-time {
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: var(--indigo-soft);
-}
-
-.spell-hint {
-  font-size: 0.72rem;
-  line-height: 1.2;
-}
-
-.hint-warning {
-  color: var(--fire);
-}
-
-.hint-info {
-  color: var(--shield);
+.word-text {
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .key-hint {
@@ -502,34 +378,14 @@
   color: var(--ink-soft);
 }
 
-@keyframes shake {
-  25% {
-    transform: translateX(-5px);
-  }
-  50% {
-    transform: translateX(5px);
-  }
-  75% {
-    transform: translateX(-3px);
-  }
+.deck-count {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
 }
 
-/* Controls */
-
-.controls {
-  margin-top: 0.9rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.controls button[aria-pressed='true'] {
-  background: var(--indigo);
-  color: var(--parchment-light);
-}
-
-/* Overlays */
+/* Result */
 
 .veil {
   position: fixed;
@@ -558,11 +414,11 @@
 
 /* Death: the loser's pages burn or blur */
 
-.status-won .combatant-enemy {
+.status-won .duel-rival {
   animation: burn 900ms forwards;
 }
 
-.status-lost .combat-player {
+.status-lost .duel-player {
   animation: blur-out 900ms forwards;
 }
 
@@ -583,42 +439,22 @@
 /* Phone width */
 
 @media (max-width: 560px) {
-  .combat {
+  .duel {
     gap: 0.6rem;
-  }
-
-  .player-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .inkwell-label {
-    text-align: left;
-  }
-
-  .ink-pip {
-    flex: 1;
-    width: auto;
   }
 
   .hand {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.9rem 0.35rem;
   }
 
-  .spell-card {
-    min-height: 8.5rem;
-    padding: 0.5rem 0.25rem 0.35rem;
+  .word {
+    min-height: 5.8rem;
   }
 
-  .spell-name {
-    font-size: 0.85rem;
+  .word-text {
+    font-size: 0.7rem;
   }
 
-  .spell-text {
-    font-size: 0.75rem;
-  }
-
-  .spell-type,
   .key-hint {
     display: none;
   }

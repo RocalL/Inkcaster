@@ -1,23 +1,34 @@
-import type { Combatant, Side } from '../../engine/index.ts'
-import { FLOATER_LIFETIME_MS, useCombatStore, type Floater } from './store.ts'
+import type { Fighter, Side, StatusId } from '../../engine/index.ts'
+import { STATUS_RULES } from '../text.ts'
+import { useDuelStore, type Floater } from './store.ts'
+
+/** Delay between consecutive floating numbers of one action. */
+const FLOATER_STAGGER_MS = 220
 
 interface Props {
   side: Side
   name: string
-  combatant: Combatant
+  fighter: Fighter
 }
 
-export function CombatantPanel({ side, name, combatant }: Props) {
-  const { hp, maxHp, shield } = combatant
+export function CombatantPanel({ side, name, fighter }: Props) {
+  const { hp, maxHp, ward, statuses } = fighter
+  const active = (Object.keys(statuses) as StatusId[]).filter((status) => statuses[status] > 0)
   return (
     <div className={`combatant combatant-${side}`}>
       <div className="combatant-header">
         <span className="combatant-name">{name}</span>
-        {shield > 0 && (
-          <span className="shield-badge" aria-label={`${shield} shield`}>
-            ◈ {shield}
+        {ward > 0 && (
+          <span className="badge badge-ward" title="Absorbs the next hit, then fades">
+            ◈ Ward {ward}
           </span>
         )}
+        {active.map((status) => (
+          <span key={status} className={`badge badge-${status}`} title={STATUS_RULES[status]}>
+            {status === 'burn' ? '🜂' : '❄'} {status === 'burn' ? 'Burn' : 'Chill'}{' '}
+            {statuses[status]}
+          </span>
+        ))}
       </div>
       <div
         className="health-bar"
@@ -28,12 +39,6 @@ export function CombatantPanel({ side, name, combatant }: Props) {
         aria-valuenow={hp}
       >
         <div className="health-fill" style={{ width: `${(hp / maxHp) * 100}%` }} />
-        {shield > 0 && (
-          <div
-            className="health-shield"
-            style={{ width: `${Math.min(1, shield / maxHp) * 100}%` }}
-          />
-        )}
         <span className="health-text">
           {hp} / {maxHp}
         </span>
@@ -44,7 +49,7 @@ export function CombatantPanel({ side, name, combatant }: Props) {
 }
 
 function Floaters({ side }: { side: Side }) {
-  const floaters = useCombatStore((store) => store.floaters)
+  const floaters = useDuelStore((store) => store.floaters)
   const mine = floaters.filter((floater) => floater.side === side)
   return (
     <div className="floaters" aria-hidden="true">
@@ -53,8 +58,8 @@ function Floaters({ side }: { side: Side }) {
           key={floater.id}
           className={`floater floater-${floater.kind}`}
           style={{
-            left: `${50 + ((index % 3) - 1) * 18}%`,
-            animationDuration: `${FLOATER_LIFETIME_MS}ms`,
+            left: `${50 + ((index % 3) - 1) * 16}%`,
+            animationDelay: `${floater.order * FLOATER_STAGGER_MS}ms`,
           }}
         >
           {floaterText(floater)}
@@ -68,11 +73,13 @@ function floaterText({ kind, amount }: Floater): string {
   switch (kind) {
     case 'damage':
       return `-${amount}`
-    case 'blocked':
+    case 'burn':
+      return `-${amount}🜂`
+    case 'warded':
       return `◈${amount}`
     case 'heal':
       return `+${amount}`
-    case 'shield':
+    case 'ward':
       return `+◈${amount}`
   }
 }

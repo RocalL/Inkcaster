@@ -1,68 +1,76 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getSpell } from '../../src/engine/index.ts'
-import { FLOATER_LIFETIME_MS, useCombatStore } from '../../src/ui/combat/store.ts'
+import { getWord } from '../../src/engine/index.ts'
+import { useDuelStore } from '../../src/ui/combat/store.ts'
 
-const store = () => useCombatStore.getState()
+const store = () => useDuelStore.getState()
 
-/** Index of a slot the player can afford right now, optionally one that deals damage. */
-function affordableSlot(damaging = false): number {
+/** Hand index of the first word of that kind (throws if the hand has none). */
+function handIndexOf(kind: 'verb' | 'modifier' | 'ink' | 'edit'): number {
   const { state, content } = store()
   if (!state || !content) throw new Error('No duel')
-  const index = state.player.hand.findIndex((card) => {
-    const spell = getSpell(content, card.spellId)
-    const deals = spell.effects.some((effect) => effect.kind === 'damage')
-    return spell.cost <= state.player.ink && (!damaging || deals)
-  })
-  if (index < 0) throw new Error('Seed 1 has no matching page in the opening hand')
+  const index = state.player.hand.findIndex((card) => getWord(content, card.wordId).kind === kind)
+  if (index < 0) throw new Error(`Hand has no ${kind}`)
   return index
 }
 
-describe('combat store', () => {
-  beforeEach(() => store().startDuel('ash_adept', 1))
-
-  it('time is frozen on the player turn', () => {
-    store().frame(500)
-    expect(store().state?.tick).toBe(0)
+describe('duel store', () => {
+  beforeEach(() => {
+    store().startDuel('ash_adept', 1)
+    // Make the opening hand predictable.
+    const state = store().state
+    if (!state) throw new Error('No duel')
+    state.player.hand = ['strike', 'twice', 'fire', 'erase', 'ward', 'mend'].map((wordId, i) => ({
+      uid: 100 + i,
+      wordId,
+    }))
   })
 
-  it('a cast resolves on the next frame, then the timeline flows until the next turn', () => {
-    const slot = affordableSlot()
-    const inkBefore = store().state?.player.ink ?? 0
-    store().cast(slot)
-    expect(store().queued).toEqual({ type: 'cast', slot })
-
-    store().frame(0)
-    expect(store().queued).toBeNull()
-    expect(store().state?.player.ink).toBeLessThan(inkBefore)
-    expect(store().state?.player.discardPile).toHaveLength(1)
-    expect(store().state?.tick).toBe(1)
-
-    store().frame(50)
-    expect(store().state?.tick).toBe(2)
-    for (let i = 0; i < 100; i++) store().frame(50)
-    expect(store().state?.tick).toBe(store().state?.player.readyAt)
+  it('selects words in order, up to three, and toggles them off', () => {
+    store().toggleWord(0)
+    store().toggleWord(1)
+    store().toggleWord(2)
+    store().toggleWord(4)
+    expect(store().selection).toEqual([0, 1, 2])
+    store().toggleWord(1)
+    expect(store().selection).toEqual([0, 2])
   })
 
-  it('only one command per turn', () => {
-    store().gatherInk()
-    store().cast(0)
-    expect(store().queued).toEqual({ type: 'wait' })
+  it('casting sends the selection to the engine and clears it', () => {
+    const hpBefore = store().state?.enemy.hp ?? 0
+    store().toggleWord(handIndexOf('verb'))
+    store().toggleWord(1)
+    store().cast()
+    expect(store().selection).toEqual([])
+    expect(store().state?.enemy.hp).toBe(hpBefore - 8)
+    expect(store().state?.round).toBe(2)
+    expect(store().floaters.length).toBeGreaterThan(0)
+    expect(store().log.length).toBeGreaterThan(0)
   })
 
-  it('fast time plays the timeline 2.5x faster', () => {
-    store().gatherInk()
-    store().frame(0)
-    store().toggleFlow()
-    store().frame(100)
-    expect(store().state?.tick).toBe(1 + 5)
+  it('a rejected cast keeps the state and explains why', () => {
+    const before = store().state
+    store().toggleWord(1)
+    store().cast()
+    expect(store().state).toBe(before)
+    expect(store().rejection?.reason).toBe('needOneVerb')
   })
 
-  it('shows floating numbers for damage, then clears them', () => {
-    store().cast(affordableSlot(true))
-    store().frame(0)
-    expect(store().floaters.some((f) => f.side === 'enemy' && f.kind === 'damage')).toBe(true)
-    store().frame(FLOATER_LIFETIME_MS)
-    expect(store().floaters).toEqual([])
+  it('erase targets need an edit word selected, one per edit', () => {
+    store().toggleErase(0)
+    expect(store().eraseTargets).toEqual([])
+    store().toggleWord(handIndexOf('edit'))
+    store().toggleErase(0)
+    store().toggleErase(1)
+    expect(store().eraseTargets).toEqual([0])
+    store().toggleWord(handIndexOf('edit'))
+    expect(store().eraseTargets).toEqual([])
+  })
+
+  it('discard and pass ends the turn', () => {
+    store().toggleWord(1)
+    store().discardAndPass()
+    expect(store().state?.round).toBe(2)
+    expect(store().state?.player.discardPile.map((card) => card.wordId)).toEqual(['twice'])
   })
 
   it('leaving resets to the menu', () => {

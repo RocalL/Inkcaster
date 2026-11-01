@@ -8,7 +8,7 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 | [x]  | 1. Combat engine (no graphics) | Tick loop, ink regen, hand/draw/discard/cooldown, effects (`damage`, `shield`, `heal`, `draw`), enemy AI, debug harness | A full duel runs in tests; a bot plays 1,000 seeded fights without crashing |
 | [x]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
 | [x]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
-| [ ]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
+| [x]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
 | [ ]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
 | [ ]  | 6. Content                     | 8-10 enemies + 2-3 bosses, 60-80 spells, 20+ bindings, ascension mode                                                   | Content targets reached                                                     |
 | [ ]  | 7. Polish                      | Art, VFX, audio, tutorial, glossary tooltips, settings, mobile/touch, 60 fps                                            | Feels juicy and onboardable                                                 |
@@ -77,4 +77,17 @@ Translated to spellwriting: "spells" are now words; statuses, minions, lasting e
 - [x] Gold: 10 + 4 per floor per win, 60 for the boss; half kept on death (spent in Phase 5)
 - [x] UI: Begin a run, run map, duel in run mode, reward screen, victory and death screens, abandon run
 - [x] Sim: `npm run sim -- --runs` (win %, floors reached, where runs die); bot test plays 120 runs
-- [ ] **Playtest: can a full run be played start to finish?** This is the "done when"; stop here
+- [x] Playtest: full runs work. Phase 4 done (2026-11-01)
+
+## Phase 5 checklist
+
+- [x] Profile (`src/meta/profile.ts`): gold, unlocked words and loadouts, rewrites, bindings, stats, run in progress
+- [x] Start small: Apprentice + 10 core words; gold unlocks the rest
+- [x] Grimoire: unlock words into the reward pool (25 / 40 / 70 by rarity)
+- [x] Loadouts: unlock archetype grimoires (100, includes their words)
+- [x] Rewrite: words tier I to III (+25% to numbers per tier; scaling words +2 base per tier); 30 / 60
+- [x] Bindings: Vellum Skin, Warded Cover, Mending Thread, Gilded Margins, Wide Shelf, Deep Inkwell
+- [x] Save: versioned (v1) in IndexedDB via idb-keyval, migration table, run saved between duels; plays without saving if storage fails or hangs
+- [x] UI: Scriptorium (4 tabs), menu with gold, stats, locked grimoires, Resume run; tier marks on rewritten words
+- [x] Economy pass: `npm run sim -- --progression` (bot run wins: 23% on run 1, about 50% by run 7, 80-88% from run 11)
+- [ ] **Playtest: die, spend gold, feel stronger next run?** This is the "done when"; stop here

@@ -18,6 +18,8 @@ export interface RunEconomy {
   goldBase: number
   goldPerFloor: number
   bossGold: number
+  /** Multiplies all gold earned (a Binding). Defaults to 1. */
+  goldMultiplier?: number
   /** Share of the gold earned that is kept when you die. */
   deathGoldShare: number
   /** Share of max HP healed after each won duel. */
@@ -133,7 +135,8 @@ export function finishDuel(content: RunContent, run: RunState, duel: DuelState):
   }
 
   const boss = isBossFloor(run)
-  const goldEarned = boss ? economy.bossGold : economy.goldBase + economy.goldPerFloor * run.floor
+  const baseGold = boss ? economy.bossGold : economy.goldBase + economy.goldPerFloor * run.floor
+  const goldEarned = Math.round(baseGold * (economy.goldMultiplier ?? 1))
   const hpAfter = duel.player.hp
   const healed = boss
     ? 0

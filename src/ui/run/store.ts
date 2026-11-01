@@ -1,8 +1,9 @@
-// UI-side run store. The run rules live in engine/run.ts; this only holds the current run
-// and hands each floor's duel to the duel store.
+// UI-side run store. The run rules live in engine/run.ts; this holds the current run, saves it
+// in the profile between duels, banks its gold when it ends, and hands each floor's duel to
+// the duel store.
 
 import { create } from 'zustand'
-import { RUN_CONTENT, getLoadout } from '../../data/index.ts'
+import { getLoadout } from '../../data/index.ts'
 import {
   chooseReward,
   createRun,
@@ -11,49 +12,91 @@ import {
   floorDuelContent,
   startFloorDuel,
   type DuelState,
+  type RunContent,
   type RunState,
 } from '../../engine/index.ts'
+import { bankRun, runContentFor } from '../../meta/profile.ts'
 import { useDuelStore } from '../combat/store.ts'
+import { useProfileStore } from '../meta/store.ts'
 
 interface RunStore {
   run: RunState | null
   loadoutId: string | null
+  /** Run content with the profile's rewrites and bindings, fixed for the whole run. */
+  content: RunContent | null
   startRun: (loadoutId: string, seed?: number) => void
+  /** Picks up the run saved in the profile. */
+  resumeRun: () => void
   /** Map -> duel: opens the current floor's duel in the duel store. */
   enterDuel: () => void
   finishDuel: (duel: DuelState) => void
   chooseReward: (wordId: string | null) => void
+  /** Leaves the end screen, or abandons a run in progress (no gold). */
   leaveRun: () => void
 }
 
-export const useRunStore = create<RunStore>()((set, get) => ({
-  run: null,
-  loadoutId: null,
-
-  startRun: (loadoutId, seed = Math.floor(Math.random() * 2 ** 31)) => {
-    set({ run: createRun(RUN_CONTENT, getLoadout(loadoutId).deck, seed), loadoutId })
-  },
-
-  enterDuel: () => {
-    const { run } = get()
-    if (!run || (run.phase !== 'map' && run.phase !== 'duel')) return
-    // Re-entering a duel that was left (e.g. after a reload) restarts it with the same seed.
-    const next = run.phase === 'map' ? enterDuel(run) : run
-    set({ run: next })
-    useDuelStore
+export const useRunStore = create<RunStore>()((set, get) => {
+  /** Sets the run and keeps the profile in step: saved while running, banked once over. */
+  const setRun = (run: RunState) => {
+    const { loadoutId } = get()
+    set({ run })
+    useProfileStore
       .getState()
-      .startRunDuel(floorDuelContent(RUN_CONTENT, next), startFloorDuel(RUN_CONTENT, next))
-  },
+      .update((profile) =>
+        run.phase === 'won' || run.phase === 'lost'
+          ? bankRun(profile, run)
+          : { ...profile, currentRun: loadoutId ? { loadoutId, run } : null },
+      )
+  }
 
-  finishDuel: (duel) => {
-    const { run } = get()
-    if (run) set({ run: finishDuel(RUN_CONTENT, run, duel) })
-  },
+  return {
+    run: null,
+    loadoutId: null,
+    content: null,
 
-  chooseReward: (wordId) => {
-    const { run } = get()
-    if (run) set({ run: chooseReward(run, wordId) })
-  },
+    startRun: (loadoutId, seed = Math.floor(Math.random() * 2 ** 31)) => {
+      const content = runContentFor(useProfileStore.getState().profile)
+      set({ loadoutId, content })
+      setRun(createRun(content, getLoadout(loadoutId).deck, seed))
+    },
 
-  leaveRun: () => set({ run: null, loadoutId: null }),
-}))
+    resumeRun: () => {
+      const { profile } = useProfileStore.getState()
+      if (!profile.currentRun) return
+      set({
+        run: profile.currentRun.run,
+        loadoutId: profile.currentRun.loadoutId,
+        content: runContentFor(profile),
+      })
+    },
+
+    enterDuel: () => {
+      const { run, content } = get()
+      if (!run || !content || (run.phase !== 'map' && run.phase !== 'duel')) return
+      // Re-entering a duel that was left (e.g. after a reload) restarts it with the same seed.
+      const next = run.phase === 'map' ? enterDuel(run) : run
+      setRun(next)
+      useDuelStore
+        .getState()
+        .startRunDuel(floorDuelContent(content, next), startFloorDuel(content, next))
+    },
+
+    finishDuel: (duel) => {
+      const { run, content } = get()
+      if (run && content) setRun(finishDuel(content, run, duel))
+    },
+
+    chooseReward: (wordId) => {
+      const { run } = get()
+      if (run) setRun(chooseReward(run, wordId))
+    },
+
+    leaveRun: () => {
+      const { run } = get()
+      if (run && run.phase !== 'won' && run.phase !== 'lost') {
+        useProfileStore.getState().update((profile) => ({ ...profile, currentRun: null }))
+      }
+      set({ run: null, loadoutId: null, content: null })
+    },
+  }
+})

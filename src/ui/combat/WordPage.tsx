@@ -12,15 +12,19 @@ interface Props {
 /** One word page, in the hand or on the writing desk. */
 export function WordPage({ word, selected = false, disabled = false, keyHint, onClick }: Props) {
   const element = word.kind === 'ink' ? ` element-${word.element}` : ''
+  const tier = word.tier ? ` tier-${word.tier}` : ''
   return (
     <button
       type="button"
-      className={`word kind-${word.kind}${element}${selected ? ' selected' : ''}`}
+      className={`word kind-${word.kind}${element}${tier}${selected ? ' selected' : ''}`}
       aria-pressed={selected}
       disabled={disabled}
       onClick={onClick}
     >
-      <span className="word-name">{word.name}</span>
+      <span className="word-name">
+        {word.name}
+        {word.tier && <span className="word-tier"> {word.tier === 2 ? 'II' : 'III'}</span>}
+      </span>
       <span className="word-kind">{KIND_LABELS[word.kind]}</span>
       <span className="word-text">{describeWord(word)}</span>
       {keyHint && <span className="key-hint">{keyHint}</span>}

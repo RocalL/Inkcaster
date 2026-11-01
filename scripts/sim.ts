@@ -5,6 +5,7 @@
 //   npm run sim -- --loadout warden --enemy ash_adept   one pairing, with details
 //   npm run sim -- --enemy ash_adept --log          print one duel, round by round
 //   npm run sim -- --runs                           full runs per loadout (win %, floors, gold)
+//   npm run sim -- --progression                    20 runs in a row, spending gold between runs
 
 import { parseArgs } from 'node:util'
 import {
@@ -16,6 +17,8 @@ import {
   getLoadout,
 } from '../src/data/index.ts'
 import { greedyBot, rarestReward, runDuel, runRun, type DuelResult } from '../src/engine/index.ts'
+import { autoLoadout, autoSpend } from '../src/meta/autobuy.ts'
+import { bankRun, newProfile, runContentFor } from '../src/meta/profile.ts'
 import { describeEvent } from '../src/ui/text.ts'
 
 const { values } = parseArgs({
@@ -26,6 +29,7 @@ const { values } = parseArgs({
     loadout: { type: 'string' },
     log: { type: 'boolean', default: false },
     runs: { type: 'boolean', default: false },
+    progression: { type: 'boolean', default: false },
   },
 })
 
@@ -48,6 +52,48 @@ if (values.log) {
     }
   }
   console.log(`\n${result.outcome.toUpperCase()} in ${result.state.round} rounds`)
+  process.exit(0)
+}
+
+if (values.progression) {
+  const players = 40
+  const runsEach = 20
+  const rows = Array.from({ length: runsEach }, () => ({ wins: 0, floors: 0, gold: 0, spent: 0 }))
+  for (let player = 0; player < players; player++) {
+    let profile = newProfile()
+    for (let index = 0; index < runsEach; index++) {
+      const loadoutId = autoLoadout(profile)
+      const seed = firstSeed + player * 1000 + index
+      const { run, floorsCleared } = runRun(
+        runContentFor(profile),
+        getLoadout(loadoutId).deck,
+        seed,
+        greedyBot,
+        rarestReward,
+      )
+      const row = rows[index]
+      if (!row) continue
+      row.wins += run.phase === 'won' ? 1 : 0
+      row.floors += floorsCleared
+      row.gold += run.gold
+      const banked = bankRun(profile, run)
+      profile = autoSpend(banked)
+      row.spent += banked.gold - profile.gold
+    }
+  }
+  console.log(`${players} profiles, ${runsEach} runs each, spending gold between runs\n`)
+  console.log('run   win    avg floors  gold earned  gold spent')
+  rows.forEach((row, index) => {
+    console.log(
+      [
+        String(index + 1).padEnd(6),
+        `${((row.wins / players) * 100).toFixed(0)}%`.padEnd(7),
+        (row.floors / players).toFixed(1).padEnd(12),
+        (row.gold / players).toFixed(0).padEnd(13),
+        (row.spent / players).toFixed(0),
+      ].join(''),
+    )
+  })
   process.exit(0)
 }
 

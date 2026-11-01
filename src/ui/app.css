@@ -14,6 +14,7 @@
   --ward: #2f6b5b;
   --spirit: #4b6e8a;
   --thorn: #5d6b2f;
+  --gold: #a07a1c;
   --neutral: #6b6150;
 
   --hp: #8c2f2a;
@@ -215,4 +216,11 @@ kbd {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+.loading {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  font-style: italic;
+  color: var(--ink-soft);
 }

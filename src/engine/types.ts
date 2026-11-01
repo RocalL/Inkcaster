@@ -61,6 +61,8 @@ export type EditKind = 'erase'
 interface WordBase {
   id: string
   name: string
+  /** Rewrite tier (2 or 3) when upgraded; absent means tier I. Set by rewriteWord. */
+  tier?: 2 | 3
 }
 
 /**
@@ -100,6 +102,8 @@ export interface PlayerSetup {
   maxHp: number
   /** HP at the start of the duel (runs carry damage over). Defaults to maxHp. */
   startingHp?: number
+  /** Ward at the start of each duel (a Binding). Defaults to 0. */
+  startingWard?: number
   /** The hand is refilled to this size after each of your turns. */
   handSize: number
   /** Most words in one spell, verb included. */

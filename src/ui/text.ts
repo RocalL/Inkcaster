@@ -39,11 +39,11 @@ export function describeEffect(effect: Effect): string {
   switch (effect.kind) {
     case 'damage': {
       const scaling = effect.scaling
-        ? ` +${effect.scaling.each} ${SCALE_TEXT[effect.scaling.per]}`
+        ? `, +${effect.scaling.each} ${SCALE_TEXT[effect.scaling.per]}`
         : ''
       return effect.target === 'self'
         ? `Take ${effect.amount} damage`
-        : `Deal ${effect.amount}${scaling} damage`
+        : `Deal ${effect.amount} damage${scaling}`
     }
     case 'heal':
       return effect.target === 'enemy' ? `Heal foe ${effect.amount}` : `Heal ${effect.amount}`
@@ -115,8 +115,15 @@ export function describeSpell(result: ComposeResult): string {
   return `${once}${times}${echo}`
 }
 
-export function wordName(content: DuelContent, wordId: string): string {
+export function wordName(content: Pick<DuelContent, 'words'>, wordId: string): string {
   return content.words[wordId]?.name ?? wordId
+}
+
+/** A word's name with its Rewrite tier, e.g. "Strike II". */
+export function wordLabel(content: Pick<DuelContent, 'words'>, wordId: string): string {
+  const word = content.words[wordId]
+  if (!word) return wordId
+  return word.tier ? `${word.name} ${word.tier === 2 ? 'II' : 'III'}` : word.name
 }
 
 export function sentence(content: DuelContent, wordIds: readonly string[]): string {

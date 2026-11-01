@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 4 — Run structure (built; waiting for the run playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 5 — Scriptorium (built; waiting for the meta-progression playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -19,10 +19,11 @@ npm run lint       # oxlint + tsc -b (typecheck)
 npm run format     # Prettier write (CI runs format:check)
 npm run sim        # headless bot sim: every loadout vs every rival (win %, rounds, hp left)
 npm run sim -- --runs                             # full runs per loadout (win %, floors, gold)
+npm run sim -- --progression                      # 20 runs in a row, spending gold between runs
 npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel, round by round
 ```
 
-Playtest shortcuts: `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel; `?run=warden&seed=3` starts a run.
+Playtest shortcuts (they ignore unlocks): `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel; `?run=warden&seed=3` starts a run; `?scriptorium` opens the Scriptorium.
 
 `scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
@@ -43,13 +44,16 @@ src/
     ai.ts       rival intent (rotation / seeded weighted)
     rng.ts      seeded RNG (state stored in DuelState)
     run.ts      run: path of floors, HP carry-over, gold, rewards; runRun (headless)
+    rewrite.ts  word upgrades (tiers I-III), one generic rule
     bot.ts      greedy player: tries every legal sentence with the real engine
   data/     Words, rivals, loadouts, run floors / rewards / economy as data (imports engine types)
-  meta/     Profile, gold, unlocks, save/load, migrations
+  meta/     Pure profile rules (profile.ts: purchases, bindings, content per profile, bankRun),
+            save.ts (versioned save + migrations, IndexedDB), autobuy.ts (sim spending policy)
   ui/       React screens: Menu, Scriptorium, Run, Duel, Rewards
     text.ts           player-facing wording for words/spells/events (pure; the sim log uses it too)
     combat/store.ts   Zustand duel store: selection, erase targets, floaters, log; practice or run mode
-    run/store.ts      Zustand run store: current run; hands each floor's duel to the duel store
+    run/store.ts      Zustand run store: current run; saves it in the profile, banks gold at the end
+    meta/store.ts     Zustand profile store: loads once, saves after every change (if storage works)
   vfx/      PixiJS layer behind the UI
   audio/    Howler.js wrappers
 scripts/    Node CLI tools (sim)
@@ -63,7 +67,7 @@ Engine model in one paragraph: duels are **spellwriting** turns (see docs/design
 1. **The engine is pure and deterministic.** Same seed + same inputs = same result. Never use `Math.random()`, `Date.now()`, `performance.now()` or timers in `src/engine`. Use `rng.ts` and the tick counter. oxlint enforces this in `.oxlintrc.json`.
 2. **The UI renders state and sends commands.** It never mutates engine state directly. No game logic in React components.
 3. **Content is data, not code.** A new spell, enemy or passive is a new data entry. It needs a new code path only when it requires a new effect kind.
-4. **The save format is versioned.** Every version bump comes with a migration function. Ask before changing the save format.
+4. **The save format is versioned.** `SAVE_VERSION` in `src/meta/save.ts`; every bump adds an entry to `MIGRATIONS` plus a test. The profile embeds `RunState`, so changing `RunState` also changes the save format. Ask before changing it.
 5. **Every effect kind has unit tests.**
 
 Effect vocabulary (keep it small and composable): `damage` (optional `scaling`), `heal`, `shield`, `applyStatus`, `draw`, `summon`, `rally`, `counter`. Statuses: burn, chill, focus, thorns, regen. Modifiers: repeat, amplify, echo, expand. Word kinds: verb, modifier, ink, edit. The word data shape is in [docs/design.md](docs/design.md#word-data-shape).

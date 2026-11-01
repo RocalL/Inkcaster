@@ -1,23 +1,30 @@
-import { RUN_CONTENT, getLoadout } from '../../data/index.ts'
-import { getWord, type RunState } from '../../engine/index.ts'
+import { getLoadout } from '../../data/index.ts'
+import { getWord, type RunContent, type RunState } from '../../engine/index.ts'
 import { WordPage } from '../combat/WordPage.tsx'
+import { wordLabel } from '../text.ts'
 import { useRunStore } from './store.ts'
 import './run.css'
 
 /** Everything in a run that is not a duel: the map, rewards and the end screen. */
 export function RunScreen() {
   const run = useRunStore((store) => store.run)
-  if (!run) return null
+  const content = useRunStore((store) => store.content)
+  if (!run || !content) return null
   switch (run.phase) {
     case 'map':
     case 'duel':
-      return <RunMap run={run} />
+      return <RunMap run={run} content={content} />
     case 'reward':
-      return <RewardPicker run={run} />
+      return <RewardPicker run={run} content={content} />
     case 'won':
     case 'lost':
-      return <RunEnd run={run} />
+      return <RunEnd run={run} content={content} />
   }
+}
+
+interface ScreenProps {
+  run: RunState
+  content: RunContent
 }
 
 function RunHeader({ run }: { run: RunState }) {
@@ -47,9 +54,9 @@ function RunHeader({ run }: { run: RunState }) {
   )
 }
 
-function RunMap({ run }: { run: RunState }) {
+function RunMap({ run, content }: ScreenProps) {
   const { enterDuel, leaveRun } = useRunStore.getState()
-  const rivalName = (id: string) => RUN_CONTENT.enemies[id]?.name ?? id
+  const rivalName = (id: string) => content.enemies[id]?.name ?? id
   const next = rivalName(run.path[run.floor] ?? '')
   return (
     <main className="run">
@@ -77,7 +84,7 @@ function RunMap({ run }: { run: RunState }) {
         </button>
       </div>
 
-      <Grimoire deck={run.deck} />
+      <Grimoire deck={run.deck} content={content} />
 
       <p className="run-footer">
         <button type="button" className="quiet" onClick={leaveRun}>
@@ -88,7 +95,7 @@ function RunMap({ run }: { run: RunState }) {
   )
 }
 
-function Grimoire({ deck }: { deck: readonly string[] }) {
+function Grimoire({ deck, content }: { deck: readonly string[]; content: RunContent }) {
   const counts = new Map<string, number>()
   for (const id of deck) counts.set(id, (counts.get(id) ?? 0) + 1)
   return (
@@ -96,8 +103,8 @@ function Grimoire({ deck }: { deck: readonly string[] }) {
       <summary>Your grimoire ({deck.length} words)</summary>
       <ul>
         {[...counts].map(([id, count]) => (
-          <li key={id} className={`grimoire-word kind-${getWord(RUN_CONTENT, id).kind}`}>
-            {getWord(RUN_CONTENT, id).name}
+          <li key={id} className={`grimoire-word kind-${getWord(content, id).kind}`}>
+            {wordLabel(content, id)}
             {count > 1 && <span className="grimoire-count"> ×{count}</span>}
           </li>
         ))}
@@ -106,7 +113,7 @@ function Grimoire({ deck }: { deck: readonly string[] }) {
   )
 }
 
-function RewardPicker({ run }: { run: RunState }) {
+function RewardPicker({ run, content }: ScreenProps) {
   const chooseReward = useRunStore((store) => store.chooseReward)
   const last = run.lastDuel
   return (
@@ -123,10 +130,10 @@ function RewardPicker({ run }: { run: RunState }) {
         <h3>Write a new word into your grimoire</h3>
         <div className="reward-options">
           {run.rewardOptions.map((id) => {
-            const rarity = RUN_CONTENT.rewardPool.find((reward) => reward.wordId === id)?.rarity
+            const rarity = content.rewardPool.find((reward) => reward.wordId === id)?.rarity
             return (
               <div key={id} className={`reward-option rarity-${rarity ?? 'common'}`}>
-                <WordPage word={getWord(RUN_CONTENT, id)} onClick={() => chooseReward(id)} />
+                <WordPage word={getWord(content, id)} onClick={() => chooseReward(id)} />
                 <span className="rarity">{rarity}</span>
               </div>
             )
@@ -136,16 +143,16 @@ function RewardPicker({ run }: { run: RunState }) {
           Skip: keep the grimoire as it is
         </button>
       </section>
-      <Grimoire deck={run.deck} />
+      <Grimoire deck={run.deck} content={content} />
     </main>
   )
 }
 
-function RunEnd({ run }: { run: RunState }) {
+function RunEnd({ run, content }: ScreenProps) {
   const leaveRun = useRunStore((store) => store.leaveRun)
   const won = run.phase === 'won'
   const cleared = won ? run.path.length : run.floor
-  const killer = RUN_CONTENT.enemies[run.path[run.floor] ?? '']?.name
+  const killer = content.enemies[run.path[run.floor] ?? '']?.name
   return (
     <main className="run run-end">
       <h2 className="run-end-title">{won ? 'The Archive is yours' : 'Your pages blur'}</h2>
@@ -167,7 +174,7 @@ function RunEnd({ run }: { run: RunState }) {
         <dt>Grimoire</dt>
         <dd>{run.deck.length} words</dd>
       </dl>
-      <p className="run-note">Gold will be spent in the Scriptorium (coming soon).</p>
+      <p className="run-note">Your gold is safe: spend it in the Scriptorium.</p>
       <button type="button" className="primary" autoFocus onClick={leaveRun}>
         Back to menu
       </button>

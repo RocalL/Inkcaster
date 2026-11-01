@@ -1,0 +1,168 @@
+.scriptorium {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 16px 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.scriptorium-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.scriptorium-header h1 {
+  margin: 0;
+  flex: 1;
+  color: var(--indigo);
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+}
+
+.gold {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tabs button[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--parchment-light);
+}
+
+.tab-blurb {
+  margin: 0;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.shop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.shop-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--parchment-light);
+}
+
+.shop-item > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.item-name {
+  font-weight: bold;
+  color: var(--indigo);
+}
+
+.item-text {
+  font-size: 0.85rem;
+}
+
+.item-words {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.ranks {
+  letter-spacing: 0.15em;
+  color: var(--gold);
+}
+
+.shop-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.8rem;
+}
+
+.shop-card {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.shop-card .word {
+  width: 100%;
+  opacity: 1;
+}
+
+.buy {
+  min-width: 4.5rem;
+  font-weight: bold;
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.owned {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* Menu additions */
+
+.profile-line {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.menu-row {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.scriptorium-button {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem 1.4rem;
+  border-width: 2px;
+  border-color: var(--gold);
+  font-size: 1.1rem;
+}
+
+.scriptorium-button span {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.loadout.locked {
+  opacity: 0.6;
+}
+
+.practice {
+  margin-top: 2rem;
+}
+
+.practice summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.storage-warning {
+  margin: 0.75rem auto 0;
+  max-width: 30rem;
+  font-size: 0.85rem;
+  color: var(--fire);
+}

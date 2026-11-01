@@ -60,10 +60,14 @@ Fire burst, Ice control, Minion swarm, Arcane/combo, Ward/defence. Each has a st
 
 ## Meta-progression (Scriptorium)
 
-- **Grimoire:** buy new spells into the unlockable pool.
-- **Rewrite (Forge):** upgrade spells permanently from tier I to tier III. A higher tier has more ornate calligraphy.
-- **Bindings:** passive talents (max HP, ink regen, starting shield, extra hand slot...).
-- **Loadouts:** starting decks / mage classes (3 for v1).
+A new profile starts with the **Apprentice** grimoire and 10 core words (Strike, Ward, Mend, Drain, Twice, Greater, Fire, Ice, Arcane, Erase). Gold earned in runs (half on death) buys, in `src/data/scriptorium.ts`:
+
+- **Grimoire:** unlock a word so it can be offered as a reward (25 / 40 / 70 by rarity).
+- **Loadouts:** unlock an archetype's starting grimoire, which also unlocks its words (100).
+- **Rewrite:** upgrade a word permanently, tier I to III (30, then 60). Each tier adds about 25% to its numbers (at least +1); scaling words gain +2 base damage. Higher tiers show more ornate borders and an "II" / "III" mark.
+- **Bindings:** passive ranks: Vellum Skin (+5 max HP, 3 ranks), Warded Cover (start each duel with Ward 3, 2 ranks), Mending Thread (+10% heal after wins, 2 ranks), Gilded Margins (+20% gold, 2 ranks), Wide Shelf (+1 reward choice), Deep Inkwell (+1 hand size).
+
+The profile and any run in progress are saved between duels. Abandoning a run keeps no gold.
 
 ## Theme and vocabulary
 

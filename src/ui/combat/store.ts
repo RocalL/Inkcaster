@@ -2,7 +2,8 @@
 // pure engine; components only read from it and call its actions. No game rules live here.
 
 import { create } from 'zustand'
-import { DEFAULT_LOADOUT_ID, duelContent } from '../../data/index.ts'
+import { practiceContentFor } from '../../meta/profile.ts'
+import { useProfileStore } from '../meta/store.ts'
 import {
   act,
   createDuel,
@@ -40,7 +41,6 @@ interface DuelStore {
   content: DuelContent | null
   state: DuelState | null
   enemyId: string | null
-  loadoutId: string
   /** Practice duels can be replayed; run duels hand their result back to the run. */
   mode: 'practice' | 'run'
   /** Hand indices being written, in order. */
@@ -53,7 +53,6 @@ interface DuelStore {
   rejection: { reason: RejectReason; id: number } | null
   nextId: number
 
-  setLoadout: (loadoutId: string) => void
   /** Practice duel against any rival with the chosen loadout. */
   startDuel: (enemyId: string, loadoutId?: string, seed?: number) => void
   /** A duel whose content and state come from elsewhere (a run floor). */
@@ -137,19 +136,15 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
 
   return {
     ...idle,
-    loadoutId: DEFAULT_LOADOUT_ID,
-
-    setLoadout: (loadoutId) => set({ loadoutId }),
-
-    startDuel: (enemyId, loadoutId = get().loadoutId, seed = randomSeed()) => {
-      const content = duelContent(enemyId, loadoutId)
-      set({ ...idle, content, enemyId, loadoutId, state: createDuel(content, seed) })
+    startDuel: (enemyId, loadoutId, seed = randomSeed()) => {
+      const { profile } = useProfileStore.getState()
+      const content = practiceContentFor(profile, enemyId, loadoutId ?? profile.selectedLoadout)
+      set({ ...idle, content, enemyId, state: createDuel(content, seed) })
     },
 
     startRunDuel: (content, state) =>
       set({ ...idle, content, enemyId: content.enemy.id, mode: 'run', state }),
 
-    // Keeps the chosen loadout for the next duel.
     leaveDuel: () => set(idle),
 
     toggleWord: (handIndex) => {

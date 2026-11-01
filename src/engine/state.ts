@@ -132,7 +132,7 @@ export function createInitialState(content: DuelContent, seed: number): DuelStat
     player: {
       hp: Math.min(player.startingHp ?? player.maxHp, player.maxHp),
       maxHp: player.maxHp,
-      ward: 0,
+      ward: player.startingWard ?? 0,
       statuses: { ...NO_STATUSES },
       minions: [],
       echo: null,

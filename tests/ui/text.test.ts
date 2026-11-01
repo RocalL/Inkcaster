@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { WORDS_BY_ID, starterDuel } from '../../src/data/index.ts'
+import { WORDS_BY_ID, duelContent } from '../../src/data/index.ts'
 import { composeSpell } from '../../src/engine/index.ts'
 import { describeEffect, describeEvent, describeSpell, describeWord } from '../../src/ui/text.ts'
 
-const content = starterDuel('ash_adept')
+const content = duelContent('ash_adept')
 const word = (id: string) => {
   const found = WORDS_BY_ID[id]
   if (!found) throw new Error(id)

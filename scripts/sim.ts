@@ -1,19 +1,21 @@
 // Headless bot simulation and debug log.
 //
-//   npm run sim                              1,000 duels against every rival
-//   npm run sim -- --fights 200 --seed 42    custom batch
-//   npm run sim -- --enemy ash_adept --log   print one duel, round by round
+//   npm run sim                                     every loadout vs every rival (win % matrix)
+//   npm run sim -- --fights 200 --seed 42           custom batch size / first seed
+//   npm run sim -- --loadout warden --enemy ash_adept   one pairing, with details
+//   npm run sim -- --enemy ash_adept --log          print one duel, round by round
 
 import { parseArgs } from 'node:util'
-import { ENEMIES, starterDuel } from '../src/data/index.ts'
+import { DEFAULT_LOADOUT_ID, ENEMIES, LOADOUTS, duelContent } from '../src/data/index.ts'
 import { greedyBot, runDuel, type DuelResult } from '../src/engine/index.ts'
 import { describeEvent } from '../src/ui/text.ts'
 
 const { values } = parseArgs({
   options: {
-    fights: { type: 'string', default: '1000' },
+    fights: { type: 'string', default: '300' },
     seed: { type: 'string', default: '1' },
     enemy: { type: 'string' },
+    loadout: { type: 'string' },
     log: { type: 'boolean', default: false },
   },
 })
@@ -21,9 +23,10 @@ const { values } = parseArgs({
 const fights = Number(values.fights)
 const firstSeed = Number(values.seed)
 const enemyIds = values.enemy ? [values.enemy] : ENEMIES.map((enemy) => enemy.id)
+const loadoutIds = values.loadout ? [values.loadout] : LOADOUTS.map((loadout) => loadout.id)
 
 if (values.log) {
-  const content = starterDuel(enemyIds[0] ?? '')
+  const content = duelContent(enemyIds[0] ?? '', values.loadout ?? DEFAULT_LOADOUT_ID)
   const result = runDuel(content, firstSeed, greedyBot, { recordLog: true })
   for (const { round, events } of result.log) {
     console.log(`— Round ${round}`)
@@ -39,43 +42,48 @@ if (values.log) {
   process.exit(0)
 }
 
-let crashed = false
-for (const enemyId of enemyIds) {
-  const content = starterDuel(enemyId)
-  const tally = { won: 0, lost: 0, timeout: 0, crashed: 0 }
-  let totalRounds = 0
-  let hpLeftOnWin = 0
+interface Tally {
+  won: number
+  lost: number
+  timeout: number
+  crashed: number
+  rounds: number
+  hpLeftOnWin: number
+}
 
+function simulate(loadoutId: string, enemyId: string): Tally {
+  const content = duelContent(enemyId, loadoutId)
+  const tally: Tally = { won: 0, lost: 0, timeout: 0, crashed: 0, rounds: 0, hpLeftOnWin: 0 }
   for (let seed = firstSeed; seed < firstSeed + fights; seed++) {
     let result: DuelResult
     try {
       result = runDuel(content, seed, greedyBot)
     } catch (error) {
       tally.crashed += 1
-      console.error(`seed ${seed} vs ${enemyId} crashed:`, error)
+      console.error(`seed ${seed}: ${loadoutId} vs ${enemyId} crashed:`, error)
       continue
     }
     tally[result.outcome] += 1
-    totalRounds += result.state.round
-    if (result.outcome === 'won') hpLeftOnWin += result.state.player.hp
+    tally.rounds += result.state.round
+    if (result.outcome === 'won') tally.hpLeftOnWin += result.state.player.hp
   }
+  return tally
+}
 
-  crashed ||= tally.crashed > 0
-  const played = fights - tally.crashed
-  console.log(
-    [
-      enemyId.padEnd(14),
-      `win ${percent(tally.won, fights)}`,
-      `lost ${tally.lost}`,
-      `timeout ${tally.timeout}`,
-      `crashed ${tally.crashed}`,
-      `avg ${(totalRounds / Math.max(1, played)).toFixed(1)} rounds`,
-      `avg hp left on win ${(hpLeftOnWin / Math.max(1, tally.won)).toFixed(1)}`,
-    ].join('  |  '),
-  )
+const winRate = (tally: Tally) => `${((tally.won / fights) * 100).toFixed(0)}%`
+const avgRounds = (tally: Tally) => (tally.rounds / Math.max(1, fights - tally.crashed)).toFixed(1)
+const avgHp = (tally: Tally) => (tally.hpLeftOnWin / Math.max(1, tally.won)).toFixed(0)
+
+let crashed = false
+console.log(`win % / avg rounds / avg hp left on win — ${fights} duels per cell\n`)
+console.log(['loadout'.padEnd(12), ...enemyIds.map((id) => id.padEnd(18))].join(''))
+for (const loadoutId of loadoutIds) {
+  const cells = enemyIds.map((enemyId) => {
+    const tally = simulate(loadoutId, enemyId)
+    crashed ||= tally.crashed > 0 || tally.timeout > 0
+    const timeouts = tally.timeout ? ` T${tally.timeout}` : ''
+    return `${winRate(tally)} ${avgRounds(tally)}r ${avgHp(tally)}hp${timeouts}`.padEnd(18)
+  })
+  console.log([loadoutId.padEnd(12), ...cells].join(''))
 }
 process.exit(crashed ? 1 : 0)
-
-function percent(part: number, total: number): string {
-  return `${((part / total) * 100).toFixed(1)}%`.padStart(6)
-}

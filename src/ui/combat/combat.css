@@ -52,6 +52,46 @@
 .badge-chill {
   color: var(--ice);
 }
+.badge-focus,
+.badge-echo {
+  color: var(--arcane);
+}
+.badge-thorns {
+  color: var(--thorn);
+}
+.badge-regen {
+  color: var(--heal);
+}
+
+/* Familiars */
+
+.minions {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.minion {
+  padding: 0.2rem 0.55rem;
+  border: 1px dashed var(--spirit);
+  border-radius: 6px;
+  background: var(--parchment-light);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
+.minion-name {
+  font-weight: bold;
+  color: var(--spirit);
+}
+
+.minion-stats {
+  color: var(--ink-soft);
+}
 
 .health-bar {
   position: relative;
@@ -180,6 +220,11 @@
   font-weight: bold;
 }
 
+.intent.cancelled .intent-words {
+  opacity: 0.35;
+  text-decoration: line-through 3px var(--ink);
+}
+
 .intent-hint {
   font-size: 0.85rem;
   color: var(--arcane);
@@ -232,7 +277,8 @@
 
 .desk-slots {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -345,6 +391,15 @@ button:disabled {
 }
 .element-arcane {
   --accent: var(--arcane);
+}
+.element-spirit {
+  --accent: var(--spirit);
+}
+.element-thorn {
+  --accent: var(--thorn);
+}
+.element-verdant {
+  --accent: var(--heal);
 }
 
 .word-name {

@@ -2,18 +2,19 @@
 // then the start of the player's next turn. Pure: the input state is never mutated.
 
 import { chooseIntent } from './ai.ts'
-import { applyEffects, startTurn } from './effects.ts'
+import { applyEffects, endTurnMinions, startTurnStatuses } from './effects.ts'
 import type { CombatEvent, RejectReason } from './events.ts'
 import { discardFromHand, refillHand } from './hand.ts'
 import { applyChill, composeSpell, type ComposeResult } from './spell.ts'
 import {
   cloneState,
   createInitialState,
+  getFighter,
   getWord,
   type ActionContext,
   type DuelState,
 } from './state.ts'
-import type { DuelContent } from './types.ts'
+import type { DuelContent, Effect, Side } from './types.ts'
 
 export type PlayerCommand =
   /**
@@ -57,37 +58,38 @@ export function act(content: DuelContent, state: DuelState, command: PlayerComma
     discardFromHand(ctx, command.words)
     ctx.events.push({ type: 'wordsDiscarded', count: command.words.length })
   }
+  if (ongoing(ctx)) endTurnMinions(ctx, 'player')
   refillHand(ctx, content.player.handSize)
 
   // Rival turn.
-  if (ctx.state.status === 'ongoing') startTurn(ctx, 'enemy')
-  if (ctx.state.status === 'ongoing') {
-    castSpell(ctx, 'enemy', castableIntent(ctx.state))
+  if (ongoing(ctx)) startTurn(ctx, 'enemy')
+  if (ongoing(ctx)) {
+    if (enemy.countered) {
+      enemy.countered = false
+      ctx.events.push({ type: 'spellCountered', side: 'enemy' })
+    } else {
+      castSpell(ctx, 'enemy', castableIntent(ctx.state))
+    }
     enemy.spellsCast += 1
-    if (ctx.state.status === 'ongoing') chooseIntent(ctx)
   }
+  if (ongoing(ctx)) endTurnMinions(ctx, 'enemy')
+  if (ongoing(ctx)) chooseIntent(ctx)
 
   // Start of the player's next turn.
-  if (ctx.state.status === 'ongoing') {
-    startTurn(ctx, 'player')
-    ctx.state.round += 1
-  }
+  if (ongoing(ctx)) startTurn(ctx, 'player')
+  if (ongoing(ctx)) ctx.state.round += 1
   return { state: ctx.state, events: ctx.events }
 }
 
-/** What the rival's next spell will do right now, after erasures and chill. */
+/**
+ * What the rival's next spell will do right now, after erasures, chill and its focus.
+ * Scaling damage is resolved against the current state.
+ */
 export function previewIntent(content: DuelContent, state: DuelState): ComposeResult {
-  const result = composeSpell(content, castableIntent(state))
-  if (!result.ok) return result
-  const chill = state.enemy.statuses.chill
-  return {
-    ...result,
-    once: applyChill(result.once, chill),
-    effects: applyChill(result.effects, chill),
-  }
+  return preview(content, state, 'enemy', castableIntent(state))
 }
 
-/** What writing these hand words would do, including the caster's chill. */
+/** What writing these hand words would do now, including the caster's chill and focus. */
 export function previewSpell(
   content: DuelContent,
   state: DuelState,
@@ -95,28 +97,85 @@ export function previewSpell(
 ): ComposeResult {
   const wordIds = handIndices.map((index) => state.player.hand[index]?.wordId ?? '')
   if (wordIds.includes('')) return { ok: false, reason: 'needOneVerb' }
-  const result = composeSpell(content, wordIds)
+  return preview(content, state, 'player', wordIds)
+}
+
+function preview(
+  content: DuelContent,
+  state: DuelState,
+  caster: Side,
+  wordIds: string[],
+): ComposeResult {
+  const fighter = getFighter(state, caster)
+  const result = composeSpell(content, wordIds, { bonusAmplify: fighter.statuses.focus })
   if (!result.ok) return result
-  const chill = state.player.statuses.chill
-  return {
-    ...result,
-    once: applyChill(result.once, chill),
-    effects: applyChill(result.effects, chill),
-  }
+  const chill = fighter.statuses.chill
+  const once = resolveScaling(state, caster, applyChill(result.once, chill), result.wordCount)
+  const effects = resolveScaling(state, caster, applyChill(result.effects, chill), result.wordCount)
+  return { ...result, once, effects }
+}
+
+/** Turns scaling damage into plain numbers for display; consumed statuses count once. */
+function resolveScaling(
+  state: DuelState,
+  caster: Side,
+  effects: Effect[],
+  wordCount: number,
+): Effect[] {
+  const target = caster === 'player' ? state.enemy : state.player
+  const used = new Set<string>()
+  return effects.map((effect) => {
+    if (effect.kind !== 'damage' || !effect.scaling) return effect
+    const { per, each, consume } = effect.scaling
+    let count = 0
+    if (!used.has(per)) {
+      if (per === 'targetBurn') count = target.statuses.burn
+      else if (per === 'targetChill') count = target.statuses.chill
+      else if (per === 'ownWard') count = getFighter(state, caster).ward
+      else count = wordCount
+    }
+    if (consume) used.add(per)
+    return { kind: 'damage', amount: effect.amount + count * each, target: effect.target }
+  })
+}
+
+function ongoing(ctx: ActionContext): boolean {
+  return ctx.state.status === 'ongoing'
 }
 
 function castableIntent(state: DuelState): string[] {
   return state.enemy.intent.filter((word) => !word.erased).map((word) => word.wordId)
 }
 
-function castSpell(ctx: ActionContext, caster: 'player' | 'enemy', wordIds: string[]): void {
-  const spell = composeSpell(ctx.content, wordIds)
-  ctx.events.push({ type: 'spellWritten', side: caster, words: wordIds })
+/** Start of a turn: statuses tick, then a pending Echo is recast. */
+function startTurn(ctx: ActionContext, side: Side): void {
+  startTurnStatuses(ctx, side)
+  const fighter = getFighter(ctx.state, side)
+  if (!ongoing(ctx) || !fighter.echo) return
+  const words = fighter.echo
+  fighter.echo = null
+  castSpell(ctx, side, words, { isEcho: true })
+}
+
+function castSpell(
+  ctx: ActionContext,
+  caster: Side,
+  wordIds: string[],
+  { isEcho = false }: { isEcho?: boolean } = {},
+): void {
+  const fighter = getFighter(ctx.state, caster)
+  const spell = composeSpell(ctx.content, wordIds, { bonusAmplify: fighter.statuses.focus })
+  ctx.events.push(
+    isEcho
+      ? { type: 'echo', side: caster, words: wordIds }
+      : { type: 'spellWritten', side: caster, words: wordIds },
+  )
   if (!spell.ok) return
-  const fighter = caster === 'player' ? ctx.state.player : ctx.state.enemy
   const effects = applyChill(spell.effects, fighter.statuses.chill)
   fighter.statuses.chill = 0
-  applyEffects(ctx, caster, effects)
+  fighter.statuses.focus = 0
+  if (spell.echo && !isEcho) fighter.echo = wordIds
+  applyEffects(ctx, caster, effects, { wordCount: spell.wordCount })
 }
 
 function validate(
@@ -130,8 +189,13 @@ function validate(
   if (!indices.every(validIndex) || new Set(indices).size !== indices.length) return 'badWordIndex'
   if (command.type === 'discard') return null
 
-  if (indices.length > content.player.maxWords) return 'tooManyWords'
   const words = indices.map((index) => getWord(content, hand[index]?.wordId ?? ''))
+  const extraWords = words.reduce(
+    (sum, word) =>
+      word.kind === 'modifier' && word.modifier.type === 'expand' ? sum + word.modifier.words : sum,
+    0,
+  )
+  if (indices.length > content.player.maxWords + extraWords) return 'tooManyWords'
   if (words.filter((word) => word.kind === 'verb').length !== 1) return 'needOneVerb'
 
   const erase = command.erase ?? []

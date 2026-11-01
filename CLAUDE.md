@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 2 — Playable combat UI (spellwriting v0 built; waiting for playtest 3).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 3 — Spell depth (built; waiting for the archetype playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -17,11 +17,11 @@ npm run build      # typecheck + production build (dist/)
 npm run test       # Vitest (run once)
 npm run lint       # oxlint + tsc -b (typecheck)
 npm run format     # Prettier write (CI runs format:check)
-npm run sim        # headless bot sim: 1,000 seeded duels per rival, win rates
+npm run sim        # headless bot sim: every loadout vs every rival (win %, rounds, hp left)
 npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel, round by round
 ```
 
-Playtest shortcut: `http://localhost:5173/Inkcaster/?duel=ash_adept&seed=3` opens a duel directly.
+Playtest shortcut: `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel directly.
 
 `scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
@@ -42,7 +42,7 @@ src/
     ai.ts       rival intent (rotation / seeded weighted)
     rng.ts      seeded RNG (state stored in DuelState)
     bot.ts      greedy player: tries every legal sentence with the real engine
-  data/     Words, rivals, starter deck as data (imports engine types)
+  data/     Words, rivals, loadouts (starting decks) as data (imports engine types)
   meta/     Profile, gold, unlocks, save/load, migrations
   ui/       React screens: Menu, Scriptorium, Run, Duel, Rewards
     text.ts           player-facing wording for words/spells/events (pure; the sim log uses it too)
@@ -53,7 +53,7 @@ scripts/    Node CLI tools (sim)
 tests/      Engine unit tests (own fixtures, not game data) + data checks + bot simulations
 ```
 
-Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
+Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Turn order inside `act`: your spell, your familiars strike, refill; rival turn start (burn, regen, thorns decay, echo), its spell (unless Blotted), its familiars, its next intent; your turn start. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
 
 ## Non-negotiable rules
 
@@ -63,7 +63,7 @@ Engine model in one paragraph: duels are **spellwriting** turns (see docs/design
 4. **The save format is versioned.** Every version bump comes with a migration function. Ask before changing the save format.
 5. **Every effect kind has unit tests.**
 
-Effect vocabulary (keep it small and composable): `damage`, `heal`, `shield`, `applyStatus`, `draw`. Word kinds: verb, modifier, ink, edit. The word data shape is in [docs/design.md](docs/design.md#word-data-shape).
+Effect vocabulary (keep it small and composable): `damage` (optional `scaling`), `heal`, `shield`, `applyStatus`, `draw`, `summon`, `rally`, `counter`. Statuses: burn, chill, focus, thorns, regen. Modifiers: repeat, amplify, echo, expand. Word kinds: verb, modifier, ink, edit. The word data shape is in [docs/design.md](docs/design.md#word-data-shape).
 
 ## Vocabulary
 

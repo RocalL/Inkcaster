@@ -4,25 +4,47 @@
 import type {
   ComposeResult,
   CombatEvent,
+  DamageSource,
   DuelContent,
   Effect,
+  ScaleSource,
   StatusId,
   WordDef,
 } from '../engine/index.ts'
 
-const STATUS_NAMES: Record<StatusId, string> = { burn: 'Burn', chill: 'Chill' }
+export const STATUS_NAMES: Record<StatusId, string> = {
+  burn: 'Burn',
+  chill: 'Chill',
+  focus: 'Focus',
+  thorns: 'Thorns',
+  regen: 'Regen',
+}
 
 export const STATUS_RULES: Record<StatusId, string> = {
-  burn: 'At the start of its turn, takes damage equal to Burn (through wards), then Burn drops by 1.',
+  burn: 'At the start of its turn, takes damage equal to Burn (through wards), then Burn halves.',
   chill: 'Each hit of its next spell deals that much less damage. Then Chill clears.',
+  focus: "Its next spell gets that much more on the verb's numbers. Then Focus clears.",
+  thorns: 'Whenever it is hit, the attacker takes that much damage. Drops by 1 each turn.',
+  regen: 'Heals that much at the start of its turn, then drops by 1.',
+}
+
+const SCALE_TEXT: Record<ScaleSource, string> = {
+  targetBurn: 'per Burn on the target',
+  targetChill: 'per Chill on the target, using it up',
+  ownWard: 'per point of your ward',
+  spellWords: 'per word in this spell',
 }
 
 export function describeEffect(effect: Effect): string {
   switch (effect.kind) {
-    case 'damage':
+    case 'damage': {
+      const scaling = effect.scaling
+        ? ` +${effect.scaling.each} ${SCALE_TEXT[effect.scaling.per]}`
+        : ''
       return effect.target === 'self'
         ? `Take ${effect.amount} damage`
-        : `Deal ${effect.amount} damage`
+        : `Deal ${effect.amount}${scaling} damage`
+    }
     case 'heal':
       return effect.target === 'enemy' ? `Heal foe ${effect.amount}` : `Heal ${effect.amount}`
     case 'shield':
@@ -33,6 +55,16 @@ export function describeEffect(effect: Effect): string {
     }
     case 'draw':
       return effect.count === 1 ? 'Draw a word' : `Draw ${effect.count} words`
+    case 'summon': {
+      const { name, attack, turns } = effect.minion
+      return `Summon a ${name} (${attack} damage each turn, ${turns} turns)`
+    }
+    case 'rally':
+      return effect.bonus > 0
+        ? `Your familiars strike now, +${effect.bonus} each`
+        : 'Your familiars strike now'
+    case 'counter':
+      return "Cancel the rival's next spell"
   }
 }
 
@@ -46,12 +78,21 @@ export function describeWord(word: WordDef): string {
     case 'verb':
     case 'ink':
       return describeEffects(word.effects)
-    case 'modifier':
-      return word.modifier.type === 'repeat'
-        ? word.modifier.times === 2
-          ? 'Cast the spell twice'
-          : `Cast the spell ${word.modifier.times} times`
-        : `+${word.modifier.amount} to the verb's numbers`
+    case 'modifier': {
+      const modifier = word.modifier
+      switch (modifier.type) {
+        case 'repeat':
+          return modifier.times === 2
+            ? 'Cast the spell twice'
+            : `Cast the spell ${modifier.times} times`
+        case 'amplify':
+          return `+${modifier.amount} to the verb's numbers`
+        case 'echo':
+          return 'Cast it again at the start of your next turn'
+        case 'expand':
+          return `This spell may hold ${modifier.words} more words`
+      }
+    }
     case 'edit':
       return "Strike out a word of the rival's next spell"
   }
@@ -68,8 +109,10 @@ export const KIND_LABELS: Record<WordDef['kind'], string> = {
 export function describeSpell(result: ComposeResult): string {
   if (!result.ok) return 'A spell needs exactly one verb'
   const once = describeEffects(result.once) || 'No effect'
-  if (result.times === 1) return once
-  return `${once} — ${result.times === 2 ? 'twice' : `${result.times} times`}`
+  const times =
+    result.times === 1 ? '' : ` — ${result.times === 2 ? 'twice' : `${result.times} times`}`
+  const echo = result.echo ? ', echoes next turn' : ''
+  return `${once}${times}${echo}`
 }
 
 export function wordName(content: DuelContent, wordId: string): string {
@@ -94,11 +137,11 @@ export function describeEvent(event: CombatEvent, content: DuelContent): string 
       return `${content.enemy.name} prepares “${sentence(content, event.words)}”`
     case 'damage': {
       const blocked = event.absorbed ? ` (${event.absorbed} warded)` : ''
-      const burn = event.source === 'burn' ? ' from Burn' : ''
-      return `${who(event.target)} took ${event.amount}${burn}${blocked}`
+      const from = event.source ? ` from ${DAMAGE_SOURCES[event.source]}` : ''
+      return `${who(event.target)} took ${event.amount}${from}${blocked}`
     }
     case 'heal':
-      return `${who(event.target)} healed ${event.amount}`
+      return `${who(event.target)} healed ${event.amount}${event.source ? ' (Regen)' : ''}`
     case 'shield':
       return `${who(event.target)} raised ward ${event.amount}`
     case 'statusApplied':
@@ -109,7 +152,21 @@ export function describeEvent(event: CombatEvent, content: DuelContent): string 
       return `Deck reshuffled (${event.cards} words)`
     case 'commandRejected':
       return null
+    case 'minionSummoned':
+      return `${who(event.side)} summoned a ${event.name}`
+    case 'minionFaded':
+      return `${event.side === 'player' ? 'Your' : `${content.enemy.name}'s`} ${event.name} fades`
+    case 'spellCountered':
+      return `${content.enemy.name}'s spell is blotted out`
+    case 'echo':
+      return `${who(event.side)} echo “${sentence(content, event.words)}”`
     case 'death':
       return event.side === 'enemy' ? `${content.enemy.name} is defeated` : 'You are defeated'
   }
+}
+
+const DAMAGE_SOURCES: Record<DamageSource, string> = {
+  burn: 'Burn',
+  thorns: 'Thorns',
+  minion: 'a familiar',
 }

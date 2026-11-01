@@ -1,12 +1,31 @@
-import { ENEMIES } from '../data/index.ts'
+import { ENEMIES, LOADOUTS } from '../data/index.ts'
 import { useDuelStore } from './combat/store.ts'
 
 export function MenuScreen() {
   const startDuel = useDuelStore((store) => store.startDuel)
+  const loadoutId = useDuelStore((store) => store.loadoutId)
+  const setLoadout = useDuelStore((store) => store.setLoadout)
   return (
     <main className="menu">
       <h1>Inkcaster</h1>
       <p className="tagline">Write your spells. Survive the duel. Rewrite yourself.</p>
+
+      <h2>Choose your grimoire</h2>
+      <ul className="loadouts">
+        {LOADOUTS.map((loadout) => (
+          <li key={loadout.id}>
+            <button
+              type="button"
+              className="loadout"
+              aria-pressed={loadout.id === loadoutId}
+              onClick={() => setLoadout(loadout.id)}
+            >
+              <span className="loadout-name">{loadout.name}</span>
+              <span className="loadout-summary">{loadout.summary}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
 
       <h2>Choose a rival</h2>
       <ul className="rivals">

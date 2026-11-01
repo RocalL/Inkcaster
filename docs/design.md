@@ -29,13 +29,34 @@ Decided 2026-11-01 after two playtests. Real time was a click race, and timeline
 - Word order does not matter in v0. Ordering rules ("the last word is emphasised", etc.) are a candidate for later.
 - Deliberately unlike Slay the Spire: no energy, no playing cards one by one, no block reset. The unit of play is the sentence you compose.
 
-## Word kinds
+## Word kinds and mechanics
 
-Verbs, modifiers, inks (elements) and edits (rewrite the rival). Planned later: more statuses, words that summon minions or set lasting enchantments, edits beyond Erase (Swap, Smudge...).
+- **Verbs**: Strike, Ward, Mend, Drain, Kindle, Ignite, Freeze, Shatter, Blot, Call, Rally, Focus, Litany, Study, Bulwark, Riposte.
+- **Modifiers**: Twice, Thrice (repeat), Greater (+3 to the verb's numbers, including status stacks and Rally's bonus), Echo (recast at the start of your next turn), Verbose (+2 word slots).
+- **Inks**: Fire (Burn 2), Ice (Chill 3), Arcane (draw), Spirit (summon a Wisp), Thorn (gain Thorns), Verdant (gain Regen).
+- **Edits**: Erase.
+
+Statuses:
+
+- **Burn**: deals its stacks at the start of the victim's turn, through wards, then **halves**, so big stacks stay linear.
+- **Chill**: weakens each hit of the victim's next spell.
+- **Focus**: your next spell gets +N, like Greater.
+- **Thorns**: whoever hits you takes N, even when your ward absorbs the hit; it drops by 1 each turn.
+- **Regen**: heals N at the start of your turn, then drops by 1.
+
+**Familiars** (minions) strike at the end of their owner's turn for a few turns; each side can have at most 4. Rally makes them strike immediately. **Blot** cancels the rival's next spell. It is player-only, because rivals show their spells in advance.
 
 ## Archetypes (target: 5 for v1)
 
-Fire burst, Ice control, Minion swarm, Arcane/combo, Ward/defence.
+Fire burst, Ice control, Minion swarm, Arcane/combo, Ward/defence. Each has a starting grimoire in `src/data/loadouts.ts`:
+
+| Loadout    | Plan                                         | Sim profile (greedy bot, 2026-11-01)      |
+| ---------- | -------------------------------------------- | ----------------------------------------- |
+| Pyromancer | Kindle/Fire to stack Burn, Ignite to cash in | fast, fragile: 6-10 rounds, 15-30 HP left |
+| Cryomancer | Freeze/Ice, Blot, Shatter                    | safe, slow: 9-12 rounds, 33-41 HP left    |
+| Summoner   | Call/Spirit familiars, Rally                 | 6-9 rounds                                |
+| Scholar    | Verbose + Litany, Focus, Echo                | risky: 77-83% wins                        |
+| Warden     | Bulwark/Ward + Thorn, Riposte, Verdant       | tanky: 37-45 HP left                      |
 
 ## Meta-progression (Scriptorium)
 

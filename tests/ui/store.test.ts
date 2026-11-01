@@ -15,7 +15,7 @@ function handIndexOf(kind: 'verb' | 'modifier' | 'ink' | 'edit'): number {
 
 describe('duel store', () => {
   beforeEach(() => {
-    store().startDuel('ash_adept', 1)
+    store().startDuel('ash_adept', 'apprentice', 1)
     // Make the opening hand predictable.
     const state = store().state
     if (!state) throw new Error('No duel')

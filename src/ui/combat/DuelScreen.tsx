@@ -44,10 +44,15 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
   const eraseTargets = useDuelStore((store) => store.eraseTargets)
   const selection = useDuelStore((store) => store.selection)
   const toggleErase = useDuelStore((store) => store.toggleErase)
-  const erasing = selection.some((index) => {
+  const selectedWords = selection.flatMap((index) => {
     const card = state.player.hand[index]
-    return card && getWord(content, card.wordId).kind === 'edit'
+    return card ? [getWord(content, card.wordId)] : []
   })
+  const erasing = selectedWords.some((word) => word.kind === 'edit')
+  const blotting = selectedWords.some(
+    (word) => word.kind === 'verb' && word.effects.some((effect) => effect.kind === 'counter'),
+  )
+  const cancelled = state.enemy.countered || blotting
 
   // Preview with the erasures the player is about to make.
   const pending: DuelState = {
@@ -61,7 +66,7 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
   }
 
   return (
-    <div className={`intent${erasing ? ' erasing' : ''}`}>
+    <div className={`intent${erasing ? ' erasing' : ''}${cancelled ? ' cancelled' : ''}`}>
       <span className="intent-label">Next spell</span>
       <div className="intent-words">
         {state.enemy.intent.map((intentWord, index) => {
@@ -83,7 +88,11 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
           )
         })}
       </div>
-      <span className="intent-effect">{describeSpell(previewIntent(content, pending))}</span>
+      <span className="intent-effect">
+        {cancelled
+          ? 'Blotted out: it will not be cast'
+          : describeSpell(previewIntent(content, pending))}
+      </span>
       {erasing && <span className="intent-hint">Choose a word to erase (not the verb)</span>}
     </div>
   )
@@ -109,7 +118,14 @@ function WritingDesk({ content, state }: { content: DuelContent; state: DuelStat
     return card && getWord(content, card.wordId).kind === 'edit'
   }).length
   const ready = preview.ok && eraseTargets.length === edits
-  const slots = Array.from({ length: content.player.maxWords }, (_, i) => selection[i])
+  const extraSlots = selection.reduce((extra, index) => {
+    const card = state.player.hand[index]
+    const word = card && getWord(content, card.wordId)
+    return word?.kind === 'modifier' && word.modifier.type === 'expand'
+      ? extra + word.modifier.words
+      : extra
+  }, 0)
+  const slots = Array.from({ length: content.player.maxWords + extraSlots }, (_, i) => selection[i])
 
   return (
     <div className="desk">

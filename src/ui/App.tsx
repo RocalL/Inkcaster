@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ENEMIES } from '../data/index.ts'
+import { ENEMIES, LOADOUTS } from '../data/index.ts'
 import { DuelScreen } from './combat/DuelScreen.tsx'
 import { useDuelStore } from './combat/store.ts'
 import { MenuScreen } from './MenuScreen.tsx'
@@ -11,13 +11,17 @@ export function App() {
   return inDuel ? <DuelScreen /> : <MenuScreen />
 }
 
-/** Playtest shortcut: `?duel=ash_adept&seed=42` opens that duel directly. */
+/** Playtest shortcut: `?duel=ash_adept&loadout=warden&seed=42` opens that duel directly. */
 function useDuelFromUrl(): void {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const enemyId = params.get('duel')
     if (!enemyId || !ENEMIES.some((enemy) => enemy.id === enemyId)) return
+    const loadout = params.get('loadout')
+    const loadoutId = LOADOUTS.some((candidate) => candidate.id === loadout)
+      ? (loadout ?? undefined)
+      : undefined
     const seed = params.get('seed')
-    useDuelStore.getState().startDuel(enemyId, seed === null ? undefined : Number(seed))
+    useDuelStore.getState().startDuel(enemyId, loadoutId, seed === null ? undefined : Number(seed))
   }, [])
 }

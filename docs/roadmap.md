@@ -6,7 +6,7 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 | ---- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [x]  | 0. Foundations                 | Vite + TS + React + Vitest, lint, CI, deploy-on-push                                                                    | "Hello world" live on a public URL                                          |
 | [x]  | 1. Combat engine (no graphics) | Tick loop, ink regen, hand/draw/discard/cooldown, effects (`damage`, `shield`, `heal`, `draw`), enemy AI, debug harness | A full duel runs in tests; a bot plays 1,000 seeded fights without crashing |
-| [ ]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
+| [x]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
 | [ ]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
 | [ ]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
 | [ ]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
@@ -53,4 +53,18 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 - [x] Spellwriting v0 engine: words (verb / modifier / ink / edit), `composeSpell`, alternating turns, Burn and Chill, Erase on the rival's intent
 - [x] Spellwriting UI: rival sentence with live preview, 3-slot writing desk, word pages, discard and pass, log, floaters
 - [x] Balance pass: the bot wins about 87% vs Ash Adept and 94% vs Frost Scribe, in 9-12 rounds, ending around 19/50 HP
-- [ ] **Playtest 3: is writing spells fun?** This is the "done when"; stop here
+- [x] Playtest 3: writing spells is fun. Phase 2 done (2026-11-01)
+
+## Phase 3 checklist
+
+Translated to spellwriting: "spells" are now words; statuses, minions, lasting effects and counters are word mechanics.
+
+- [x] Statuses: Burn (now halves each tick), Chill, Focus, Thorns (hit back, even through wards), Regen
+- [x] Scaling damage: per target Burn / Chill (Shatter uses it up), per own ward, per word in the spell
+- [x] Minions: Call / Spirit summon familiars that strike at the end of their owner's turn; Rally; max 4 per side
+- [x] Counter: Blot cancels the rival's next spell (player only)
+- [x] Lasting / combo modifiers: Echo (recast next turn), Verbose (+2 word slots), Thrice
+- [x] 28 words, 6 loadouts (Apprentice + 5 archetypes), 4 rivals (Bramble Warden, Inkling Mother added)
+- [x] Sim matrix: every loadout vs every rival (`npm run sim`)
+- [x] UI: grimoire picker, familiars and status badges, Blot preview, 4th desk slot with Verbose
+- [ ] **Playtest: do the 5 archetypes feel distinct?** This is the "done when"; stop here

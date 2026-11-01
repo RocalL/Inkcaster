@@ -12,6 +12,8 @@
   --ice: #1f5fa8;
   --arcane: #6b3fa0;
   --ward: #2f6b5b;
+  --spirit: #4b6e8a;
+  --thorn: #5d6b2f;
   --neutral: #6b6150;
 
   --hp: #8c2f2a;
@@ -76,7 +78,7 @@ kbd {
 /* Menu */
 
 .menu {
-  max-width: 34rem;
+  max-width: 40rem;
   margin: 0 auto;
   padding: 3rem 16px;
   text-align: center;
@@ -108,6 +110,38 @@ kbd {
   padding: 0;
   display: grid;
   gap: 0.75rem;
+}
+
+.loadouts {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem;
+}
+
+.loadout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+}
+
+.loadout[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--parchment-light);
+}
+
+.loadout-name {
+  font-weight: bold;
+}
+
+.loadout-summary {
+  font-size: 0.8rem;
+  opacity: 0.85;
 }
 
 .rival {

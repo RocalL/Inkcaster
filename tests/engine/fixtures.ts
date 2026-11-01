@@ -44,6 +44,63 @@ export const TEST_WORDS: Record<string, WordDef> = Object.fromEntries(
         effects: [{ kind: 'draw', count: 1 }],
       },
       { id: 'erase', name: 'Erase', kind: 'edit', edit: 'erase' },
+      // Phase 3 mechanics
+      {
+        id: 'ignite',
+        name: 'Ignite',
+        kind: 'verb',
+        effects: [{ kind: 'damage', amount: 2, scaling: { per: 'targetBurn', each: 2 } }],
+      },
+      {
+        id: 'shatter',
+        name: 'Shatter',
+        kind: 'verb',
+        effects: [
+          { kind: 'damage', amount: 3, scaling: { per: 'targetChill', each: 3, consume: true } },
+        ],
+      },
+      {
+        id: 'riposte',
+        name: 'Riposte',
+        kind: 'verb',
+        effects: [{ kind: 'damage', amount: 0, scaling: { per: 'ownWard', each: 1 } }],
+      },
+      {
+        id: 'litany',
+        name: 'Litany',
+        kind: 'verb',
+        effects: [{ kind: 'damage', amount: 0, scaling: { per: 'spellWords', each: 2 } }],
+      },
+      {
+        id: 'call',
+        name: 'Call',
+        kind: 'verb',
+        effects: [{ kind: 'summon', minion: { name: 'Inkling', attack: 2, turns: 2 } }],
+      },
+      { id: 'rally', name: 'Rally', kind: 'verb', effects: [{ kind: 'rally', bonus: 1 }] },
+      { id: 'blot', name: 'Blot', kind: 'verb', effects: [{ kind: 'counter' }] },
+      {
+        id: 'focus',
+        name: 'Focus',
+        kind: 'verb',
+        effects: [{ kind: 'applyStatus', status: 'focus', stacks: 4, target: 'self' }],
+      },
+      { id: 'echo', name: 'Echo', kind: 'modifier', modifier: { type: 'echo' } },
+      { id: 'verbose', name: 'Verbose', kind: 'modifier', modifier: { type: 'expand', words: 2 } },
+      {
+        id: 'thorn',
+        name: 'Thorn',
+        kind: 'ink',
+        element: 'thorn',
+        effects: [{ kind: 'applyStatus', status: 'thorns', stacks: 3, target: 'self' }],
+      },
+      {
+        id: 'verdant',
+        name: 'Verdant',
+        kind: 'ink',
+        element: 'verdant',
+        effects: [{ kind: 'applyStatus', status: 'regen', stacks: 3, target: 'self' }],
+      },
     ] satisfies WordDef[]
   ).map((word) => [word.id, word]),
 )

@@ -2,7 +2,7 @@
 // pure engine; components only read from it and call its actions. No game rules live here.
 
 import { create } from 'zustand'
-import { starterDuel } from '../../data/index.ts'
+import { DEFAULT_LOADOUT_ID, duelContent } from '../../data/index.ts'
 import {
   act,
   createDuel,
@@ -40,6 +40,7 @@ interface DuelStore {
   content: DuelContent | null
   state: DuelState | null
   enemyId: string | null
+  loadoutId: string
   /** Hand indices being written, in order. */
   selection: number[]
   /** Rival intent indices chosen for the selected edit words. */
@@ -50,7 +51,8 @@ interface DuelStore {
   rejection: { reason: RejectReason; id: number } | null
   nextId: number
 
-  startDuel: (enemyId: string, seed?: number) => void
+  setLoadout: (loadoutId: string) => void
+  startDuel: (enemyId: string, loadoutId?: string, seed?: number) => void
   leaveDuel: () => void
   toggleWord: (handIndex: number) => void
   toggleErase: (intentIndex: number) => void
@@ -80,6 +82,19 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
       const card = state.player.hand[index]
       return card && getWord(content, card.wordId).kind === 'edit'
     }).length
+  }
+
+  /** Sentence length allowed for this selection (Verbose adds slots). */
+  const maxWordsFor = (selection: number[]): number => {
+    const { content, state } = get()
+    if (!content || !state) return 0
+    return selection.reduce((max, index) => {
+      const card = state.player.hand[index]
+      const word = card && getWord(content, card.wordId)
+      return word?.kind === 'modifier' && word.modifier.type === 'expand'
+        ? max + word.modifier.words
+        : max
+    }, content.player.maxWords)
   }
 
   const send = (command: PlayerCommand) => {
@@ -116,12 +131,16 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
 
   return {
     ...idle,
+    loadoutId: DEFAULT_LOADOUT_ID,
 
-    startDuel: (enemyId, seed = randomSeed()) => {
-      const content = starterDuel(enemyId)
-      set({ ...idle, content, enemyId, state: createDuel(content, seed) })
+    setLoadout: (loadoutId) => set({ loadoutId }),
+
+    startDuel: (enemyId, loadoutId = get().loadoutId, seed = randomSeed()) => {
+      const content = duelContent(enemyId, loadoutId)
+      set({ ...idle, content, enemyId, loadoutId, state: createDuel(content, seed) })
     },
 
+    // Keeps the chosen loadout for the next duel.
     leaveDuel: () => set(idle),
 
     toggleWord: (handIndex) => {
@@ -132,7 +151,7 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
         // Dropping an edit word may leave too many erase targets.
         const edits = editsSelected()
         set((store) => ({ eraseTargets: store.eraseTargets.slice(0, edits) }))
-      } else if (selection.length < content.player.maxWords) {
+      } else if (selection.length < maxWordsFor([...selection, handIndex])) {
         set({ selection: [...selection, handIndex], rejection: null })
       }
     },

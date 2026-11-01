@@ -12,6 +12,9 @@ describe('composeSpell', () => {
       times: 1,
       effects: [{ kind: 'damage', amount: 4 }],
       edits: 0,
+      echo: false,
+      extraWords: 0,
+      wordCount: 1,
     })
   })
 

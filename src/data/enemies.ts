@@ -29,4 +29,28 @@ export const ENEMIES: readonly EnemyDef[] = [
       { words: ['greater', 'strike', 'twice'], weight: 3 },
     ],
   },
+  {
+    id: 'bramble_warden',
+    name: 'Bramble Warden',
+    maxHp: 58,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['thorn', 'ward'] },
+      { words: ['greater', 'strike', 'twice'] },
+      { words: ['greater', 'bulwark'] },
+      { words: ['greater', 'riposte'] },
+    ],
+  },
+  {
+    id: 'inkling_mother',
+    name: 'Inkling Mother',
+    maxHp: 50,
+    behaviour: 'weighted',
+    spells: [
+      { words: ['call', 'twice'], weight: 2 },
+      { words: ['greater', 'rally'], weight: 2 },
+      { words: ['spirit', 'strike', 'twice'], weight: 2 },
+      { words: ['ward'], weight: 1 },
+    ],
+  },
 ]

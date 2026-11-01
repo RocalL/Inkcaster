@@ -15,28 +15,48 @@ export type ComposeResult =
       effects: Effect[]
       /** Number of edit words (Erase...) in the sentence. */
       edits: number
+      /** The spell will be cast again at the start of the caster's next turn. */
+      echo: boolean
+      /** Extra word slots granted by expand modifiers (Verbose). */
+      extraWords: number
+      /** Number of words in the sentence; counted by 'spellWords' scaling. */
+      wordCount: number
     }
   | { ok: false; reason: 'needOneVerb' }
 
+export interface ComposeOptions {
+  /** Added to the amplify total, e.g. from the caster's Focus. */
+  bonusAmplify?: number
+}
+
 /**
- * Rules: exactly one verb. Amplify modifiers add to the verb's damage/shield/heal numbers.
+ * Rules: exactly one verb. Amplify modifiers (and Focus) add to the verb's numbers.
  * Ink words append their effects. Repeat modifiers multiply the number of casts.
  * Word order does not matter (yet).
  */
-export function composeSpell(content: DuelContent, wordIds: readonly string[]): ComposeResult {
+export function composeSpell(
+  content: DuelContent,
+  wordIds: readonly string[],
+  { bonusAmplify = 0 }: ComposeOptions = {},
+): ComposeResult {
   const words = wordIds.map((id) => getWord(content, id))
   const verbs = words.flatMap((word) => (word.kind === 'verb' ? [word] : []))
   const verb = verbs[0]
   if (!verb || verbs.length > 1) return { ok: false, reason: 'needOneVerb' }
 
-  let amplify = 0
+  let amplify = bonusAmplify
   let times = 1
-  const inkEffects: Effect[] = []
+  let echo = false
+  let extraWords = 0
   let edits = 0
+  const inkEffects: Effect[] = []
   for (const word of words) {
     if (word.kind === 'modifier') {
-      if (word.modifier.type === 'amplify') amplify += word.modifier.amount
-      else times *= word.modifier.times
+      const modifier = word.modifier
+      if (modifier.type === 'amplify') amplify += modifier.amount
+      else if (modifier.type === 'repeat') times *= modifier.times
+      else if (modifier.type === 'echo') echo = true
+      else extraWords += modifier.words
     } else if (word.kind === 'ink') {
       inkEffects.push(...word.effects)
     } else if (word.kind === 'edit') {
@@ -46,15 +66,23 @@ export function composeSpell(content: DuelContent, wordIds: readonly string[]): 
 
   const once = [...verb.effects.map((effect) => amplifyEffect(effect, amplify)), ...inkEffects]
   const effects = Array.from({ length: times }, () => once).flat()
-  return { ok: true, once, times, effects, edits }
+  return { ok: true, once, times, effects, edits, echo, extraWords, wordCount: words.length }
 }
 
 function amplifyEffect(effect: Effect, amount: number): Effect {
   if (amount === 0) return effect
-  if (effect.kind === 'damage' || effect.kind === 'shield' || effect.kind === 'heal') {
-    return { ...effect, amount: effect.amount + amount }
+  switch (effect.kind) {
+    case 'damage':
+    case 'shield':
+    case 'heal':
+      return { ...effect, amount: effect.amount + amount }
+    case 'applyStatus':
+      return { ...effect, stacks: effect.stacks + amount }
+    case 'rally':
+      return { ...effect, bonus: effect.bonus + amount }
+    default:
+      return effect
   }
-  return effect
 }
 
 /** Chill on the caster weakens every hit of its next spell. */

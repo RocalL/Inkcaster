@@ -98,6 +98,8 @@ export interface EnemyDef {
 
 export interface PlayerSetup {
   maxHp: number
+  /** HP at the start of the duel (runs carry damage over). Defaults to maxHp. */
+  startingHp?: number
   /** The hand is refilled to this size after each of your turns. */
   handSize: number
   /** Most words in one spell, verb included. */

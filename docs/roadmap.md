@@ -7,7 +7,7 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 | [x]  | 0. Foundations                 | Vite + TS + React + Vitest, lint, CI, deploy-on-push                                                                    | "Hello world" live on a public URL                                          |
 | [x]  | 1. Combat engine (no graphics) | Tick loop, ink regen, hand/draw/discard/cooldown, effects (`damage`, `shield`, `heal`, `draw`), enemy AI, debug harness | A full duel runs in tests; a bot plays 1,000 seeded fights without crashing |
 | [x]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
-| [ ]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
+| [x]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
 | [ ]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
 | [ ]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
 | [ ]  | 6. Content                     | 8-10 enemies + 2-3 bosses, 60-80 spells, 20+ bindings, ascension mode                                                   | Content targets reached                                                     |
@@ -67,4 +67,14 @@ Translated to spellwriting: "spells" are now words; statuses, minions, lasting e
 - [x] 28 words, 6 loadouts (Apprentice + 5 archetypes), 4 rivals (Bramble Warden, Inkling Mother added)
 - [x] Sim matrix: every loadout vs every rival (`npm run sim`)
 - [x] UI: grimoire picker, familiars and status badges, Blot preview, 4th desk slot with Verbose
-- [ ] **Playtest: do the 5 archetypes feel distinct?** This is the "done when"; stop here
+- [x] Playtest: the 5 archetypes feel distinct. Phase 3 done (2026-11-01)
+
+## Phase 4 checklist
+
+- [x] Engine `run.ts`: linear path (6 duels in rising tiers, then the boss), HP carried over with a 40% heal after each win, gold, rewards, death and victory; serializable state
+- [x] Rival HP ramps per floor (x0.5 to x0.9); boss The Archivist (telegraphs Focus, then "Strike Thrice")
+- [x] Rewards: pick 1 of 3 distinct words (rarity-weighted) or skip
+- [x] Gold: 10 + 4 per floor per win, 60 for the boss; half kept on death (spent in Phase 5)
+- [x] UI: Begin a run, run map, duel in run mode, reward screen, victory and death screens, abandon run
+- [x] Sim: `npm run sim -- --runs` (win %, floors reached, where runs die); bot test plays 120 runs
+- [ ] **Playtest: can a full run be played start to finish?** This is the "done when"; stop here

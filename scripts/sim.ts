@@ -4,10 +4,18 @@
 //   npm run sim -- --fights 200 --seed 42           custom batch size / first seed
 //   npm run sim -- --loadout warden --enemy ash_adept   one pairing, with details
 //   npm run sim -- --enemy ash_adept --log          print one duel, round by round
+//   npm run sim -- --runs                           full runs per loadout (win %, floors, gold)
 
 import { parseArgs } from 'node:util'
-import { DEFAULT_LOADOUT_ID, ENEMIES, LOADOUTS, duelContent } from '../src/data/index.ts'
-import { greedyBot, runDuel, type DuelResult } from '../src/engine/index.ts'
+import {
+  DEFAULT_LOADOUT_ID,
+  ENEMIES,
+  LOADOUTS,
+  RUN_CONTENT,
+  duelContent,
+  getLoadout,
+} from '../src/data/index.ts'
+import { greedyBot, rarestReward, runDuel, runRun, type DuelResult } from '../src/engine/index.ts'
 import { describeEvent } from '../src/ui/text.ts'
 
 const { values } = parseArgs({
@@ -17,6 +25,7 @@ const { values } = parseArgs({
     enemy: { type: 'string' },
     loadout: { type: 'string' },
     log: { type: 'boolean', default: false },
+    runs: { type: 'boolean', default: false },
   },
 })
 
@@ -40,6 +49,51 @@ if (values.log) {
   }
   console.log(`\n${result.outcome.toUpperCase()} in ${result.state.round} rounds`)
   process.exit(0)
+}
+
+if (values.runs) {
+  const runs = Number(values.fights === '300' ? '200' : values.fights)
+  const floors = RUN_CONTENT.floors.length + 1
+  console.log(`${runs} runs per loadout (${floors} floors, boss last)\n`)
+  console.log('loadout     win    avg floors  avg gold  avg deck  died on floor (1..boss)')
+  let failed = false
+  for (const loadoutId of loadoutIds) {
+    const deaths = Array.from({ length: floors }, () => 0)
+    let wins = 0
+    let cleared = 0
+    let gold = 0
+    let deck = 0
+    for (let seed = firstSeed; seed < firstSeed + runs; seed++) {
+      try {
+        const result = runRun(
+          RUN_CONTENT,
+          getLoadout(loadoutId).deck,
+          seed,
+          greedyBot,
+          rarestReward,
+        )
+        if (result.run.phase === 'won') wins += 1
+        else deaths[result.run.floor] = (deaths[result.run.floor] ?? 0) + 1
+        cleared += result.floorsCleared
+        gold += result.run.gold
+        deck += result.run.deck.length
+      } catch (error) {
+        failed = true
+        console.error(`seed ${seed}: ${loadoutId} run crashed:`, error)
+      }
+    }
+    console.log(
+      [
+        loadoutId.padEnd(12),
+        `${((wins / runs) * 100).toFixed(0)}%`.padEnd(7),
+        (cleared / runs).toFixed(1).padEnd(12),
+        (gold / runs).toFixed(0).padEnd(10),
+        (deck / runs).toFixed(1).padEnd(10),
+        deaths.join(' '),
+      ].join(''),
+    )
+  }
+  process.exit(failed ? 1 : 0)
 }
 
 interface Tally {

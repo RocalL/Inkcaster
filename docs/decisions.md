@@ -2,7 +2,6 @@
 
 ## Open
 
-- [ ] Linear path vs. branching map (duel / elite / shop / rest) for runs
 - [ ] Art approach: flat icons + particles, or hand-drawn
 - [ ] Domain and name availability (inkcaster.com / .io / .gg, itch.io, Steam)
 
@@ -35,3 +34,8 @@
 | 2026-11-01 | Thorns trigger even when a ward absorbs the hit                                                                                                                  | Makes Ward + Thorn a real defensive build                                                                                   |
 | 2026-11-01 | Blot (counter) and draw are player-only; rivals' data must not use them                                                                                          | Rivals' spells are shown in advance; a rival counter would be invisible                                                     |
 | 2026-11-01 | 5 archetype loadouts + Apprentice selectable in the menu now                                                                                                     | Lets the Phase 3 "done when" be playtested before runs exist; they become Loadouts in Phase 5                               |
+| 2026-11-01 | Runs are a **linear path**: 6 duels in rising tiers, then the boss; the whole path is visible                                                                    | Quickest to build and balance; a branching map can come later                                                               |
+| 2026-11-01 | HP carries over between duels, with a 40% heal after each win                                                                                                    | Every duel matters; defensive words have run-long value                                                                     |
+| 2026-11-01 | Rival HP ramps per floor (x0.5 to x0.9) instead of buffing the player                                                                                            | Early floors are a warm-up; attrition was killing runs on floor 2                                                           |
+| 2026-11-01 | Gold: 10 + 4 per floor per win, 60 for the boss; half kept on death                                                                                              | The spec's "small consolation on death"                                                                                     |
+| 2026-11-01 | `seedRng` scrambles the seed (murmur3 finalizer)                                                                                                                 | Consecutive seeds (sims, tests) gave correlated first rolls                                                                 |

@@ -104,7 +104,7 @@ export function cloneState(state: DuelState): DuelState {
   }
 }
 
-export function getWord(content: DuelContent, wordId: string): WordDef {
+export function getWord(content: Pick<DuelContent, 'words'>, wordId: string): WordDef {
   const word = content.words[wordId]
   if (!word) throw new Error(`Unknown word id: ${wordId}`)
   return word
@@ -130,7 +130,7 @@ export function createInitialState(content: DuelContent, seed: number): DuelStat
     rng,
     status: 'ongoing',
     player: {
-      hp: player.maxHp,
+      hp: Math.min(player.startingHp ?? player.maxHp, player.maxHp),
       maxHp: player.maxHp,
       ward: 0,
       statuses: { ...NO_STATUSES },

@@ -1,9 +1,10 @@
-import type { DuelContent, EnemyDef, PlayerSetup, WordDef } from '../engine/index.ts'
+import type { DuelContent, EnemyDef, PlayerSetup, RunContent, WordDef } from '../engine/index.ts'
 import { ENEMIES } from './enemies.ts'
 import { LOADOUTS, type Loadout } from './loadouts.ts'
+import { REWARD_POOL, RUN_BOSS_ID, RUN_ECONOMY, RUN_FLOORS } from './run.ts'
 import { WORDS } from './words.ts'
 
-export { ENEMIES, LOADOUTS, WORDS, type Loadout }
+export { ENEMIES, LOADOUTS, REWARD_POOL, WORDS, type Loadout }
 
 export const WORDS_BY_ID: Readonly<Record<string, WordDef>> = Object.fromEntries(
   WORDS.map((word) => [word.id, word]),
@@ -36,4 +37,17 @@ export function duelContent(enemyId: string, loadoutId = DEFAULT_LOADOUT_ID): Du
     player: { ...BASE_PLAYER, deck: getLoadout(loadoutId).deck },
     enemy: getEnemy(enemyId),
   }
+}
+
+/** Rivals that only appear as run bosses, not in practice duels. */
+export const BOSS_IDS: readonly string[] = [RUN_BOSS_ID]
+
+export const RUN_CONTENT: RunContent = {
+  words: WORDS_BY_ID,
+  enemies: Object.fromEntries(ENEMIES.map((enemy) => [enemy.id, enemy])),
+  player: BASE_PLAYER,
+  floors: RUN_FLOORS,
+  bossId: RUN_BOSS_ID,
+  rewardPool: REWARD_POOL,
+  economy: RUN_ECONOMY,
 }

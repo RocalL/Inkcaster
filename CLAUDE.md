@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 3 — Spell depth (built; waiting for the archetype playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 4 — Run structure (built; waiting for the run playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -18,10 +18,11 @@ npm run test       # Vitest (run once)
 npm run lint       # oxlint + tsc -b (typecheck)
 npm run format     # Prettier write (CI runs format:check)
 npm run sim        # headless bot sim: every loadout vs every rival (win %, rounds, hp left)
+npm run sim -- --runs                             # full runs per loadout (win %, floors, gold)
 npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel, round by round
 ```
 
-Playtest shortcut: `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel directly.
+Playtest shortcuts: `http://localhost:5173/Inkcaster/?duel=ash_adept&loadout=warden&seed=3` opens a duel; `?run=warden&seed=3` starts a run.
 
 `scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
@@ -41,19 +42,21 @@ src/
     events.ts   events emitted per action
     ai.ts       rival intent (rotation / seeded weighted)
     rng.ts      seeded RNG (state stored in DuelState)
+    run.ts      run: path of floors, HP carry-over, gold, rewards; runRun (headless)
     bot.ts      greedy player: tries every legal sentence with the real engine
-  data/     Words, rivals, loadouts (starting decks) as data (imports engine types)
+  data/     Words, rivals, loadouts, run floors / rewards / economy as data (imports engine types)
   meta/     Profile, gold, unlocks, save/load, migrations
   ui/       React screens: Menu, Scriptorium, Run, Duel, Rewards
     text.ts           player-facing wording for words/spells/events (pure; the sim log uses it too)
-    combat/store.ts   Zustand store: current selection, erase targets, floaters, log
+    combat/store.ts   Zustand duel store: selection, erase targets, floaters, log; practice or run mode
+    run/store.ts      Zustand run store: current run; hands each floor's duel to the duel store
   vfx/      PixiJS layer behind the UI
   audio/    Howler.js wrappers
 scripts/    Node CLI tools (sim)
 tests/      Engine unit tests (own fixtures, not game data) + data checks + bot simulations
 ```
 
-Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Turn order inside `act`: your spell, your familiars strike, refill; rival turn start (burn, regen, thorns decay, echo), its spell (unless Blotted), its familiars, its next intent; your turn start. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
+Engine model in one paragraph: duels are **spellwriting** turns (see docs/design.md). `act(content, state, command)` takes the player's `write` (hand indices, plus erase targets) or `discard`, resolves it, plays the whole rival turn, starts the player's next turn, and returns a new state plus events. Invalid commands return the same state and a `commandRejected` event. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Turn order inside `act`: your spell, your familiars strike, refill; rival turn start (burn, regen, thorns decay, echo), its spell (unless Blotted), its familiars, its next intent; your turn start. Runs (`run.ts`) sit above duels: `createRun` → `enterDuel` → (duel played with `act`) → `finishDuel` → `chooseReward` → next floor; phases map / duel / reward / won / lost. `composeSpell` is the single place where words become effects; the UI previews spells and the rival intent through `previewSpell` / `previewIntent`.
 
 ## Non-negotiable rules
 

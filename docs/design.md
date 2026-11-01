@@ -7,8 +7,8 @@ Inkcaster is a solo, browser-based **roguelite deckbuilder** with **die-and-retr
 ## Core loop
 
 1. Start a run with a **weak starter deck** (8-10 basic spells).
-2. Fight a chain of 6-8 duels against rival inkcasters, ending with a boss.
-3. After each duel, gain gold and pick **1 of 3** temporary spell rewards.
+2. Fight a **linear chain of 6 duels** against rival inkcasters, then the boss (The Archivist). The whole path is visible from the start, and rivals get tougher each floor.
+3. Your HP carries over between duels, with 40% healed after each win. After each win, gain gold and add **1 of 3** offered words to your grimoire (or skip).
 4. Whether you win or die, you earn gold: more for deeper progress, a small consolation on death.
 5. Spend gold in the **Scriptorium** (the hub) on permanent progression, then start a new run.
 

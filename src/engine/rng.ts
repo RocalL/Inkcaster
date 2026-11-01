@@ -3,8 +3,12 @@
 
 export type RngState = number
 
+/** Scrambles the seed (murmur3 finalizer) so that consecutive seeds start far apart. */
 export function seedRng(seed: number): RngState {
-  return seed | 0
+  let h = seed | 0
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b)
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)
+  return (h ^ (h >>> 16)) | 0
 }
 
 /** Returns a float in [0, 1) and the next RNG state. */

@@ -59,6 +59,20 @@ button:disabled {
   cursor: default;
 }
 
+button.primary {
+  background: var(--indigo);
+  color: var(--parchment-light);
+  font-weight: bold;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--indigo-soft);
+}
+
+button:disabled {
+  opacity: 0.45;
+}
+
 button.quiet {
   border-color: transparent;
   background: transparent;
@@ -142,6 +156,21 @@ kbd {
 .loadout-summary {
   font-size: 0.8rem;
   opacity: 0.85;
+}
+
+.begin {
+  margin-top: 1.5rem;
+}
+
+.begin-run {
+  font-size: 1.25rem;
+  padding: 0.7rem 2rem;
+}
+
+.begin-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
 }
 
 .rival {

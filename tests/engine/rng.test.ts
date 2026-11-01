@@ -21,6 +21,13 @@ describe('rng', () => {
     expect(sequence(1, 5)).not.toEqual(sequence(2, 5))
   })
 
+  it('consecutive seeds give unrelated first rolls', () => {
+    const firsts = Array.from({ length: 1000 }, (_, i) => nextRandom(seedRng(i + 1))[0])
+    const low = firsts.filter((value) => value < 0.5).length
+    expect(low).toBeGreaterThan(450)
+    expect(low).toBeLessThan(550)
+  })
+
   it('stays in [0, 1)', () => {
     for (const value of sequence(7, 10_000)) {
       expect(value).toBeGreaterThanOrEqual(0)

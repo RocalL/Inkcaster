@@ -53,4 +53,18 @@ export const ENEMIES: readonly EnemyDef[] = [
       { words: ['ward'], weight: 1 },
     ],
   },
+  {
+    // Boss. Telegraphs Focus, then a Focused "Strike Thrice" (27): Erase Thrice or Blot it.
+    id: 'archivist',
+    name: 'The Archivist',
+    maxHp: 65,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['ice', 'strike', 'twice'] },
+      { words: ['greater', 'ward', 'thorn'] },
+      { words: ['call', 'twice'] },
+      { words: ['focus'] },
+      { words: ['strike', 'thrice'] },
+    ],
+  },
 ]

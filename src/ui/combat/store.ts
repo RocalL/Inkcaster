@@ -41,6 +41,8 @@ interface DuelStore {
   state: DuelState | null
   enemyId: string | null
   loadoutId: string
+  /** Practice duels can be replayed; run duels hand their result back to the run. */
+  mode: 'practice' | 'run'
   /** Hand indices being written, in order. */
   selection: number[]
   /** Rival intent indices chosen for the selected edit words. */
@@ -52,7 +54,10 @@ interface DuelStore {
   nextId: number
 
   setLoadout: (loadoutId: string) => void
+  /** Practice duel against any rival with the chosen loadout. */
   startDuel: (enemyId: string, loadoutId?: string, seed?: number) => void
+  /** A duel whose content and state come from elsewhere (a run floor). */
+  startRunDuel: (content: DuelContent, state: DuelState) => void
   leaveDuel: () => void
   toggleWord: (handIndex: number) => void
   toggleErase: (intentIndex: number) => void
@@ -65,6 +70,7 @@ const idle = {
   content: null,
   state: null,
   enemyId: null,
+  mode: 'practice' as const,
   selection: [],
   eraseTargets: [],
   floaters: [],
@@ -139,6 +145,9 @@ export const useDuelStore = create<DuelStore>()((set, get) => {
       const content = duelContent(enemyId, loadoutId)
       set({ ...idle, content, enemyId, loadoutId, state: createDuel(content, seed) })
     },
+
+    startRunDuel: (content, state) =>
+      set({ ...idle, content, enemyId: content.enemy.id, mode: 'run', state }),
 
     // Keeps the chosen loadout for the next duel.
     leaveDuel: () => set(idle),

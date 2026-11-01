@@ -1,10 +1,13 @@
-import { ENEMIES, LOADOUTS } from '../data/index.ts'
+import { BOSS_IDS, ENEMIES, LOADOUTS, RUN_CONTENT } from '../data/index.ts'
 import { useDuelStore } from './combat/store.ts'
+import { useRunStore } from './run/store.ts'
 
 export function MenuScreen() {
   const startDuel = useDuelStore((store) => store.startDuel)
   const loadoutId = useDuelStore((store) => store.loadoutId)
   const setLoadout = useDuelStore((store) => store.setLoadout)
+  const startRun = useRunStore((store) => store.startRun)
+  const floors = RUN_CONTENT.floors.length
   return (
     <main className="menu">
       <h1>Inkcaster</h1>
@@ -27,9 +30,19 @@ export function MenuScreen() {
         ))}
       </ul>
 
-      <h2>Choose a rival</h2>
+      <div className="begin">
+        <button type="button" className="primary begin-run" onClick={() => startRun(loadoutId)}>
+          Begin a run
+        </button>
+        <p className="begin-hint">
+          {floors} duels, then the boss. Your wounds carry over; each win adds a word to your
+          grimoire.
+        </p>
+      </div>
+
+      <h2>Practice duel</h2>
       <ul className="rivals">
-        {ENEMIES.map((enemy) => (
+        {ENEMIES.filter((enemy) => !BOSS_IDS.includes(enemy.id)).map((enemy) => (
           <li key={enemy.id}>
             <button type="button" className="rival" onClick={() => startDuel(enemy.id)}>
               <span className="rival-name">{enemy.name}</span>

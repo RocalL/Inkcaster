@@ -57,7 +57,7 @@ export function describeEffect(effect: Effect): string {
       return effect.count === 1 ? 'Draw a word' : `Draw ${effect.count} words`
     case 'summon': {
       const { name, attack, turns } = effect.minion
-      return `Summon a ${name} (${attack} damage each turn, ${turns} turns)`
+      return `Summon ${withArticle(name)} (${attack} damage each turn, ${turns} turns)`
     }
     case 'rally':
       return effect.bonus > 0
@@ -153,7 +153,7 @@ export function describeEvent(event: CombatEvent, content: DuelContent): string 
     case 'commandRejected':
       return null
     case 'minionSummoned':
-      return `${who(event.side)} summoned a ${event.name}`
+      return `${who(event.side)} summoned ${withArticle(event.name)}`
     case 'minionFaded':
       return `${event.side === 'player' ? 'Your' : `${content.enemy.name}'s`} ${event.name} fades`
     case 'spellCountered':
@@ -169,4 +169,8 @@ const DAMAGE_SOURCES: Record<DamageSource, string> = {
   burn: 'Burn',
   thorns: 'Thorns',
   minion: 'a familiar',
+}
+
+function withArticle(noun: string): string {
+  return /^[aeiou]/i.test(noun) ? `an ${noun}` : `a ${noun}`
 }

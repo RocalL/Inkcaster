@@ -9,6 +9,7 @@ import {
 } from '../../engine/index.ts'
 import { describeSpell } from '../text.ts'
 import { CombatantPanel } from './CombatantPanel.tsx'
+import { useRunStore } from '../run/store.ts'
 import { useDuelStore } from './store.ts'
 import { WordPage } from './WordPage.tsx'
 import './combat.css'
@@ -210,19 +211,33 @@ function DuelLog({ round }: { round: number }) {
 
 function ResultOverlay({ won, rivalName }: { won: boolean; rivalName: string }) {
   const enemyId = useDuelStore((store) => store.enemyId)
+  const mode = useDuelStore((store) => store.mode)
   const { startDuel, leaveDuel } = useDuelStore.getState()
+  const continueRun = () => {
+    const { state } = useDuelStore.getState()
+    if (state) useRunStore.getState().finishDuel(state)
+    leaveDuel()
+  }
   return (
     <div className="veil" role="dialog" aria-modal="true" aria-label="Duel over">
       <p className="veil-title">{won ? 'Victory' : 'Defeat'}</p>
       <p>{won ? `The ${rivalName}'s pages burn.` : 'Your pages blur into ink.'}</p>
-      <div className="veil-actions">
-        <button type="button" autoFocus onClick={() => enemyId && startDuel(enemyId)}>
-          Duel again
-        </button>
-        <button type="button" className="quiet" onClick={leaveDuel}>
-          Back to menu
-        </button>
-      </div>
+      {mode === 'run' ? (
+        <div className="veil-actions">
+          <button type="button" className="primary" autoFocus onClick={continueRun}>
+            Continue
+          </button>
+        </div>
+      ) : (
+        <div className="veil-actions">
+          <button type="button" autoFocus onClick={() => enemyId && startDuel(enemyId)}>
+            Duel again
+          </button>
+          <button type="button" className="quiet" onClick={leaveDuel}>
+            Back to menu
+          </button>
+        </div>
+      )}
     </div>
   )
 }

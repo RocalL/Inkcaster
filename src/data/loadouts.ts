@@ -107,7 +107,7 @@ export const LOADOUTS: readonly Loadout[] = [
       'litany',
       'focus',
       'focus',
-      'study',
+      'strike',
       'strike',
       'ward',
       'verbose',

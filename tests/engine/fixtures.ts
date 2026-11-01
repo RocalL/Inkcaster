@@ -2,6 +2,7 @@
 
 import {
   createCombat,
+  isPlayerTurn,
   step,
   type CombatContent,
   type CombatEvent,
@@ -18,7 +19,7 @@ export const TEST_SPELLS: Record<string, SpellDef> = {
     name: 'Bolt',
     type: 'direct',
     cost: 1,
-    cooldown: 1,
+    time: 1,
     tags: [],
     effects: [{ kind: 'damage', amount: 5 }],
   },
@@ -27,7 +28,7 @@ export const TEST_SPELLS: Record<string, SpellDef> = {
     name: 'Ward',
     type: 'ward',
     cost: 1,
-    cooldown: 1,
+    time: 1,
     tags: [],
     effects: [{ kind: 'shield', amount: 4 }],
   },
@@ -36,7 +37,7 @@ export const TEST_SPELLS: Record<string, SpellDef> = {
     name: 'Salve',
     type: 'utility',
     cost: 1,
-    cooldown: 1,
+    time: 1,
     tags: [],
     effects: [{ kind: 'heal', amount: 5 }],
   },
@@ -45,7 +46,7 @@ export const TEST_SPELLS: Record<string, SpellDef> = {
     name: 'Study',
     type: 'utility',
     cost: 1,
-    cooldown: 1,
+    time: 1,
     tags: [],
     effects: [{ kind: 'draw', count: 1 }],
   },
@@ -54,7 +55,7 @@ export const TEST_SPELLS: Record<string, SpellDef> = {
     name: 'Costly',
     type: 'direct',
     cost: 5,
-    cooldown: 1,
+    time: 1,
     tags: [],
     effects: [{ kind: 'damage', amount: 1 }],
   },
@@ -105,6 +106,24 @@ export function run(
   let current = state
   for (let i = 0; i < count; i++) {
     const result = step(content, current, i === 0 ? commands : [])
+    current = result.state
+    events.push(...result.events)
+  }
+  return { state: current, events }
+}
+
+/** Lets `ticks` of time pass, gathering ink whenever it is the player's turn. */
+export function advance(
+  content: CombatContent,
+  state: CombatState,
+  ticks: number,
+): { state: CombatState; events: CombatEvent[] } {
+  const events: CombatEvent[] = []
+  let current = state
+  const target = state.tick + ticks
+  while (current.tick < target && current.status === 'ongoing') {
+    const commands: PlayerCommand[] = isPlayerTurn(current) ? [{ type: 'wait' }] : []
+    const result = step(content, current, commands)
     current = result.state
     events.push(...result.events)
   }

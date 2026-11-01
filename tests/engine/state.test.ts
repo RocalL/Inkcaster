@@ -7,12 +7,11 @@ describe('createCombat', () => {
     const content = makeContent({ player: { grimoire: ['bolt', 'ward', 'salve', 'study'] } })
     const state = createCombat(content, 1)
     expect(state.player.hand).toHaveLength(2)
-    expect(state.player.hand.every((slot) => slot.card && slot.cooldown === 0)).toBe(true)
     expect(state.player.drawPile).toHaveLength(2)
     expect(state.player.discardPile).toEqual([])
 
-    const all = [...state.player.hand.map((slot) => slot.card), ...state.player.drawPile]
-    expect(all.map((card) => card?.uid).sort()).toEqual([0, 1, 2, 3])
+    const all = [...state.player.hand, ...state.player.drawPile]
+    expect(all.map((card) => card.uid).sort()).toEqual([0, 1, 2, 3])
   })
 
   it('shuffles deterministically per seed', () => {
@@ -30,14 +29,15 @@ describe('createCombat', () => {
     expect(orders.size).toBeGreaterThan(1)
   })
 
-  it('leaves slots empty when the grimoire is smaller than the hand', () => {
+  it('starts with a smaller hand when the grimoire is smaller than the hand size', () => {
     const state = createCombat(makeContent({ player: { grimoire: ['bolt'] } }), 1)
-    expect(state.player.hand.filter((slot) => slot.card)).toHaveLength(1)
+    expect(state.player.hand).toHaveLength(1)
   })
 
   it('sets up both combatants from the content', () => {
     const state = createCombat(makeContent({ player: { startingInk: 99 } }), 1)
     expect(state.player).toMatchObject({ hp: 30, maxHp: 30, shield: 0, ink: 5, ticksPerInk: 20 })
+    expect(state.player.readyAt).toBe(0)
     expect(state.enemy).toMatchObject({ hp: 20, maxHp: 20, shield: 0, cast: null })
     expect(state.status).toBe('ongoing')
     expect(state.tick).toBe(0)

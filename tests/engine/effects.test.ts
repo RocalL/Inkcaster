@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { CombatContent, Effect } from '../../src/engine/index.ts'
-import { TEST_SPELLS, cast, makeCombat, makeContent, run } from './fixtures.ts'
+import { MAX_HAND_SIZE, type CombatContent, type Effect } from '../../src/engine/index.ts'
+import { TEST_SPELLS, advance, cast, makeCombat, makeContent, run } from './fixtures.ts'
 
 /** Content whose whole grimoire is one test spell with the given effects. */
 function contentWith(effects: Effect[], grimoire = ['probe', 'probe', 'probe', 'probe']) {
@@ -14,7 +14,7 @@ function contentWith(effects: Effect[], grimoire = ['probe', 'probe', 'probe', '
         name: 'Probe',
         type: 'direct',
         cost: 0,
-        cooldown: 1,
+        time: 1,
         tags: [],
         effects,
       },
@@ -78,7 +78,7 @@ describe('heal', () => {
   })
 })
 
-describe('shield', () => {
+describe('shield (ward)', () => {
   it('shields self by default and stacks', () => {
     const { state } = castProbe([
       { kind: 'shield', amount: 4 },
@@ -86,45 +86,47 @@ describe('shield', () => {
     ])
     expect(state.player.shield).toBe(7)
   })
+
+  it('absorbs only the next hit: the rest of the ward is lost', () => {
+    const { state, events } = castProbe([
+      { kind: 'shield', amount: 10, target: 'enemy' },
+      { kind: 'damage', amount: 3 },
+      { kind: 'damage', amount: 3 },
+    ])
+    expect(state.enemy).toMatchObject({ hp: 17, shield: 0 })
+    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 0, absorbed: 3 })
+    expect(events).toContainEqual({ type: 'damage', target: 'enemy', amount: 3, absorbed: 0 })
+  })
 })
 
 describe('draw', () => {
-  it('refills recharging slots immediately, closest to ready first', () => {
-    const content = contentWith([{ kind: 'draw', count: 1 }])
+  it('adds pages to the end of the hand', () => {
+    const content = contentWith([{ kind: 'draw', count: 2 }])
     const state = makeCombat(content)
     state.player.hand = [
-      { card: { uid: 0, spellId: 'probe' }, cooldown: 0 },
-      { card: null, cooldown: 15 },
-      { card: null, cooldown: 5 },
+      { uid: 0, spellId: 'probe' },
+      { uid: 1, spellId: 'bolt' },
     ]
     state.player.drawPile = [
-      { uid: 1, spellId: 'bolt' },
       { uid: 2, spellId: 'bolt' },
+      { uid: 3, spellId: 'bolt' },
+      { uid: 4, spellId: 'bolt' },
     ]
 
     const { state: after, events } = run(content, state, 1, [cast(0)])
-    expect(after.player.hand.map((slot) => slot.card?.uid ?? null)).toEqual([null, null, 1])
+    // The probe is replaced by uid 2, then draw 2 adds uids 3 and 4.
+    expect(after.player.hand.map((card) => card.uid)).toEqual([2, 1, 3, 4])
     expect(events.filter((event) => event.type === 'cardDrawn')).toEqual([
+      { type: 'cardDrawn', slot: 0, spellId: 'bolt' },
       { type: 'cardDrawn', slot: 2, spellId: 'bolt' },
+      { type: 'cardDrawn', slot: 3, spellId: 'bolt' },
     ])
   })
 
-  it('draws as many pages as asked, up to the empty slots', () => {
-    const content = contentWith([{ kind: 'draw', count: 5 }])
-    const state = makeCombat(content)
-    state.player.hand = [
-      { card: { uid: 0, spellId: 'probe' }, cooldown: 0 },
-      { card: null, cooldown: 15 },
-    ]
-    state.player.drawPile = [
-      { uid: 1, spellId: 'bolt' },
-      { uid: 2, spellId: 'bolt' },
-      { uid: 3, spellId: 'bolt' },
-    ]
-
-    const { state: after } = run(content, state, 1, [cast(0)])
-    expect(after.player.hand.map((slot) => slot.card?.uid)).toEqual([2, 1])
-    expect(after.player.drawPile.map((card) => card.uid)).toEqual([3])
+  it('never grows the hand above MAX_HAND_SIZE', () => {
+    const content = contentWith([{ kind: 'draw', count: 20 }], Array(30).fill('probe'))
+    const { state } = run(content, makeCombat(content), 1, [cast(0)])
+    expect(state.player.hand).toHaveLength(MAX_HAND_SIZE)
   })
 
   it('does nothing for the enemy', () => {
@@ -137,7 +139,7 @@ describe('draw', () => {
       },
     })
     const start = makeCombat(content)
-    const { state } = run(content, start, 2)
+    const { state } = advance(content, start, 3)
     expect(state.player.hand).toEqual(start.player.hand)
   })
 })

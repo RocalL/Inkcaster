@@ -14,6 +14,7 @@ import {
   type CombatEvent,
   type DuelResult,
 } from '../src/engine/index.ts'
+import { describeEvent } from '../src/ui/text.ts'
 
 const { values } = parseArgs({
   options: {
@@ -84,26 +85,6 @@ function percent(part: number, total: number): string {
 }
 
 function describe(event: CombatEvent, content: CombatContent): string {
-  const enemySpell = (id: string) => content.enemy.spells.find((spell) => spell.id === id)?.name
-  const name = (id: string) => content.spells[id]?.name ?? enemySpell(id) ?? id
-  switch (event.type) {
-    case 'spellCast':
-      return `${event.side} casts ${name(event.spellId)}`
-    case 'enemyCastStart':
-      return `enemy begins ${name(event.spellId)} (${seconds(event.castTicks)}s cast bar)`
-    case 'damage':
-      return `${event.target} takes ${event.amount}${event.absorbed ? ` (${event.absorbed} absorbed)` : ''}`
-    case 'heal':
-      return `${event.target} heals ${event.amount}`
-    case 'shield':
-      return `${event.target} gains ${event.amount} shield`
-    case 'cardDrawn':
-      return `  slot ${event.slot} draws ${name(event.spellId)}`
-    case 'reshuffle':
-      return `  discard reshuffled (${event.cards} pages)`
-    case 'commandRejected':
-      return `  cast from slot ${event.slot} rejected: ${event.reason}`
-    case 'death':
-      return `${event.side} is defeated`
-  }
+  if (event.type === 'commandRejected') return `  slot ${event.slot} rejected: ${event.reason}`
+  return describeEvent(event, content) ?? event.type
 }

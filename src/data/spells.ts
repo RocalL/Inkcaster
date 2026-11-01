@@ -1,7 +1,8 @@
 import type { SpellDef } from '../engine/index.ts'
 
 // Starter spells. Phase 1 only has damage / heal / shield / draw; statuses, minions and
-// counters arrive in Phase 3. Numbers are first-pass placeholders, tuned with `npm run sim`.
+// counters arrive in Phase 3. `time` is the timeline cost: fast pages let you act again
+// before the rival's spell lands, slow ones hit harder. Numbers are tuned with `npm run sim`.
 
 export const STARTER_SPELLS: readonly SpellDef[] = [
   {
@@ -9,7 +10,7 @@ export const STARTER_SPELLS: readonly SpellDef[] = [
     name: 'Spark',
     type: 'direct',
     cost: 1,
-    cooldown: 1.5,
+    time: 0.5,
     tags: ['fire'],
     effects: [{ kind: 'damage', amount: 3 }],
   },
@@ -18,29 +19,29 @@ export const STARTER_SPELLS: readonly SpellDef[] = [
     name: 'Ember Bolt',
     type: 'direct',
     cost: 2,
-    cooldown: 3,
+    time: 1.25,
     tags: ['fire'],
-    effects: [{ kind: 'damage', amount: 6 }],
+    effects: [{ kind: 'damage', amount: 7 }],
   },
   {
     id: 'scorch',
     name: 'Scorch',
     type: 'direct',
     cost: 3,
-    cooldown: 4,
+    time: 2.5,
     tags: ['fire'],
-    effects: [{ kind: 'damage', amount: 10 }],
+    effects: [{ kind: 'damage', amount: 14 }],
   },
   {
     id: 'frost_shard',
     name: 'Frost Shard',
     type: 'direct',
     cost: 2,
-    cooldown: 2.5,
+    time: 1.5,
     tags: ['ice'],
     effects: [
-      { kind: 'damage', amount: 4 },
-      { kind: 'shield', amount: 2 },
+      { kind: 'damage', amount: 5 },
+      { kind: 'shield', amount: 5 },
     ],
   },
   {
@@ -48,25 +49,25 @@ export const STARTER_SPELLS: readonly SpellDef[] = [
     name: 'Ice Ward',
     type: 'ward',
     cost: 2,
-    cooldown: 4,
+    time: 1,
     tags: ['ice', 'ward'],
-    effects: [{ kind: 'shield', amount: 8 }],
+    effects: [{ kind: 'shield', amount: 14 }],
   },
   {
     id: 'inkblot_shield',
     name: 'Inkblot Shield',
     type: 'ward',
     cost: 1,
-    cooldown: 2.5,
+    time: 0.5,
     tags: ['ward'],
-    effects: [{ kind: 'shield', amount: 4 }],
+    effects: [{ kind: 'shield', amount: 6 }],
   },
   {
     id: 'quill_jab',
     name: 'Quill Jab',
     type: 'direct',
     cost: 0,
-    cooldown: 2,
+    time: 1,
     tags: ['arcane'],
     effects: [{ kind: 'damage', amount: 2 }],
   },
@@ -75,7 +76,7 @@ export const STARTER_SPELLS: readonly SpellDef[] = [
     name: 'Arcane Insight',
     type: 'utility',
     cost: 1,
-    cooldown: 3,
+    time: 1,
     tags: ['arcane'],
     effects: [{ kind: 'draw', count: 2 }],
   },
@@ -84,20 +85,17 @@ export const STARTER_SPELLS: readonly SpellDef[] = [
     name: 'Mend',
     type: 'utility',
     cost: 2,
-    cooldown: 5,
+    time: 2,
     tags: ['ward'],
-    effects: [{ kind: 'heal', amount: 6 }],
+    effects: [{ kind: 'heal', amount: 8 }],
   },
   {
     id: 'margin_note',
     name: 'Margin Note',
     type: 'utility',
-    cost: 1,
-    cooldown: 2,
+    cost: 0,
+    time: 0.5,
     tags: ['arcane'],
-    effects: [
-      { kind: 'draw', count: 1 },
-      { kind: 'shield', amount: 2 },
-    ],
+    effects: [{ kind: 'draw', count: 1 }],
   },
 ]

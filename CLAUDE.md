@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 2 — Playable combat UI.** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 2 — Playable combat UI (timeline turns built; waiting for playtest 2).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -21,6 +21,8 @@ npm run sim        # headless bot sim: 1,000 seeded fights per enemy, win rates
 npm run sim -- --enemy ash_adept --seed 3 --log   # debug harness: one duel's event log
 ```
 
+Playtest shortcut: `http://localhost:5173/Inkcaster/?duel=ash_adept&seed=3` opens a duel directly.
+
 `scripts/` runs directly with Node's type stripping, so imports use explicit `.ts` extensions everywhere.
 
 Node 22 LTS via nvm (`.nvmrc`). Package manager: npm. Deploy: GitHub Actions to GitHub Pages on push to `main`.
@@ -33,23 +35,25 @@ src/
     types.ts    content definitions (SpellDef, EnemyDef, PlayerSetup, Effect)
     state.ts    CombatState (plain data), createCombat, cloneState
     sim.ts      step() (one tick), advanceClock (pause/slow), runDuel (headless)
-    hand.ts     ink regen, slot cooldown -> draw -> reshuffle cycle
+    hand.ts     ink regen, cast -> discard -> replace, draw, reshuffle
     effects.ts  effect resolver
     events.ts   events emitted per step (triggers/bus come in Phase 3)
-    ai.ts       enemy inkcaster behaviours (telegraphed casts)
+    ai.ts       enemy inkcaster behaviours (telegraphed casts) + forecastEnemy for the timeline
     rng.ts      seeded RNG (state stored in CombatState)
     time.ts     20 ticks/s, seconds -> ticks
     bot.ts      greedy player policy for sims
   data/     Spells, enemies, passives, loadouts as data (imports engine types)
   meta/     Profile, gold, unlocks, save/load, migrations
   ui/       React screens: Menu, Scriptorium, Run, Combat, Rewards
+    text.ts           player-facing wording for effects/events (pure; the sim log uses it too)
+    combat/store.ts   Zustand store: real-time clock, queued commands, floaters, log
   vfx/      PixiJS layer behind the UI
   audio/    Howler.js wrappers
 scripts/    Node CLI tools (sim)
 tests/      Engine unit tests (own fixtures, not game data) + data checks + bot simulations
 ```
 
-Engine model in one paragraph: `step(content, state, commands)` returns a new state and the events for that tick. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Order inside a tick: player commands, ink, hand, enemy. Casting puts the page in the discard pile and empties its slot for the spell's cooldown, then the slot draws the next page. Enemies follow a data-defined pattern: they idle for `castGap`, telegraph a cast bar for `castTime`, then resolve. Player casts are instant.
+Engine model in one paragraph: duels use **timeline turns** (see docs/design.md). `step(content, state, commands)` returns a new state and the events for that tick. When `tick >= player.readyAt` it is the player's turn: time is frozen and `step` returns the same state until a valid `cast` or `wait` arrives, which moves `readyAt` forward by the spell's `time`. It clones the state with `cloneState`, so new nested state must be added there; a test feeds it frozen input to catch misses. Order inside a tick: player command, ink, enemy. Enemies idle for `castGap`, telegraph a cast bar for `castTime`, then resolve; `forecastEnemy` predicts this exactly (a test checks it against real runs). Wards absorb only the next hit.
 
 ## Non-negotiable rules
 

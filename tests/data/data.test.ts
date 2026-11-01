@@ -20,7 +20,7 @@ describe('spells', () => {
     for (const spell of STARTER_SPELLS) {
       expect(Number.isInteger(spell.cost), spell.id).toBe(true)
       expect(spell.cost, spell.id).toBeGreaterThanOrEqual(0)
-      expect(spell.cooldown, spell.id).toBeGreaterThan(0)
+      expect(spell.time, spell.id).toBeGreaterThan(0)
       expect(spell.effects.length, spell.id).toBeGreaterThan(0)
       spell.effects.forEach(checkEffect)
     }

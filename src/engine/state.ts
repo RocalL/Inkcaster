@@ -9,15 +9,10 @@ export interface CardInstance {
   spellId: string
 }
 
-export interface HandSlot {
-  card: CardInstance | null
-  /** Ticks left before an empty slot draws its next page. */
-  cooldown: number
-}
-
 export interface Combatant {
   hp: number
   maxHp: number
+  /** Absorbs the next hit only; whatever is left after that hit is lost. */
   shield: number
 }
 
@@ -27,7 +22,9 @@ export interface PlayerState extends Combatant {
   /** Ticks accumulated towards the next point of ink. */
   inkProgress: number
   ticksPerInk: number
-  hand: HandSlot[]
+  /** Tick at which the player's next turn starts. Time freezes there until they act. */
+  readyAt: number
+  hand: CardInstance[]
   drawPile: CardInstance[]
   discardPile: CardInstance[]
 }
@@ -76,12 +73,17 @@ export function cloneState(state: CombatState): CombatState {
     ...state,
     player: {
       ...player,
-      hand: player.hand.map((slot) => ({ ...slot })),
+      hand: [...player.hand],
       drawPile: [...player.drawPile],
       discardPile: [...player.discardPile],
     },
     enemy: { ...enemy, cast: enemy.cast && { ...enemy.cast } },
   }
+}
+
+/** True when time is frozen waiting for the player's command. */
+export function isPlayerTurn(state: CombatState): boolean {
+  return state.status === 'ongoing' && state.tick >= state.player.readyAt
 }
 
 export function getSpell(content: CombatContent, spellId: string): SpellDef {
@@ -103,10 +105,6 @@ export function createCombat(content: CombatContent, seed: number): CombatState 
     return { uid, spellId }
   })
   const [deck, rng] = shuffle(cards, seedRng(seed))
-  const hand: HandSlot[] = Array.from({ length: player.handSize }, (_, i) => ({
-    card: deck[i] ?? null,
-    cooldown: 0,
-  }))
 
   return {
     tick: 0,
@@ -120,7 +118,8 @@ export function createCombat(content: CombatContent, seed: number): CombatState 
       maxInk: player.maxInk,
       inkProgress: 0,
       ticksPerInk: durationTicks(1 / player.inkPerSecond),
-      hand,
+      readyAt: 0,
+      hand: deck.slice(0, player.handSize),
       drawPile: deck.slice(player.handSize),
       discardPile: [],
     },

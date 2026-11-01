@@ -1,8 +1,11 @@
-// The hand cycle: casting empties a slot for the spell's cooldown, then the slot draws
-// the next page from the draw pile. The discard pile is reshuffled when the draw pile runs out.
+// Ink and pages. A cast page goes to the discard pile and is replaced right away from the
+// draw pile; the discard pile is reshuffled when the draw pile runs out.
 
 import { shuffle } from './rng.ts'
-import type { PlayerState, StepContext } from './state.ts'
+import type { CardInstance, PlayerState, StepContext } from './state.ts'
+
+/** `draw` effects can grow the hand above its starting size, up to this. */
+export const MAX_HAND_SIZE = 7
 
 export function tickInk(player: PlayerState): void {
   if (player.ink >= player.maxInk) {
@@ -16,40 +19,38 @@ export function tickInk(player: PlayerState): void {
   }
 }
 
-/** Counts down recharging slots and fills the ones that are ready. */
-export function tickHand(ctx: StepContext): void {
-  ctx.state.player.hand.forEach((slot, index) => {
-    if (slot.card) return
-    if (slot.cooldown > 0) slot.cooldown -= 1
-    if (slot.cooldown === 0) drawIntoSlot(ctx, index)
-  })
+/** Removes the page at `index`, discards it and refills the same position if the hand is short. */
+export function playFromHand(ctx: StepContext, index: number): CardInstance | null {
+  const player = ctx.state.player
+  const [card] = player.hand.splice(index, 1)
+  if (!card) return null
+  player.discardPile.push(card)
+
+  if (player.hand.length < ctx.content.player.handSize) {
+    const next = takeFromDrawPile(ctx)
+    if (next) {
+      player.hand.splice(index, 0, next)
+      ctx.events.push({ type: 'cardDrawn', slot: index, spellId: next.spellId })
+    }
+  }
+  return card
 }
 
-/** Refills up to `count` empty slots immediately, those closest to ready first. */
+/** Adds up to `count` pages to the end of the hand, never above MAX_HAND_SIZE. */
 export function drawCards(ctx: StepContext, count: number): void {
-  const emptySlots = ctx.state.player.hand
-    .map((slot, index) => ({ slot, index }))
-    .filter(({ slot }) => !slot.card)
-    .sort((a, b) => a.slot.cooldown - b.slot.cooldown || a.index - b.index)
-
-  for (const { index } of emptySlots.slice(0, count)) {
-    if (!drawIntoSlot(ctx, index)) return
+  const hand = ctx.state.player.hand
+  for (let i = 0; i < count && hand.length < MAX_HAND_SIZE; i++) {
+    const card = takeFromDrawPile(ctx)
+    if (!card) return
+    hand.push(card)
+    ctx.events.push({ type: 'cardDrawn', slot: hand.length - 1, spellId: card.spellId })
   }
 }
 
-/** Returns false when there is no page left to draw; the slot then retries every tick. */
-function drawIntoSlot(ctx: StepContext, slotIndex: number): boolean {
+function takeFromDrawPile(ctx: StepContext): CardInstance | undefined {
   const player = ctx.state.player
-  const slot = player.hand[slotIndex]
-  if (!slot) return false
   if (player.drawPile.length === 0) reshuffle(ctx)
-
-  const card = player.drawPile.shift()
-  if (!card) return false
-  slot.card = card
-  slot.cooldown = 0
-  ctx.events.push({ type: 'cardDrawn', slot: slotIndex, spellId: card.spellId })
-  return true
+  return player.drawPile.shift()
 }
 
 function reshuffle(ctx: StepContext): void {

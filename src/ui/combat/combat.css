@@ -1,0 +1,625 @@
+.combat {
+  position: relative;
+  min-height: 100vh;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 1rem;
+  user-select: none;
+}
+
+/* Combatants */
+
+.combatant {
+  position: relative;
+}
+
+.combatant-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+}
+
+.combatant-name {
+  font-size: 1.2rem;
+  color: var(--indigo);
+}
+
+.combatant-enemy .combatant-name {
+  font-size: 1.5rem;
+}
+
+.shield-badge {
+  color: var(--shield);
+  font-weight: bold;
+}
+
+.health-bar {
+  position: relative;
+  height: 1.4rem;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--parchment-light);
+  overflow: hidden;
+}
+
+.health-fill {
+  height: 100%;
+  background: var(--hp);
+  transition: width 120ms linear;
+}
+
+.health-shield {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--shield) 70%, transparent) 0 6px,
+    color-mix(in srgb, var(--shield) 45%, transparent) 6px 12px
+  );
+  transition: width 120ms linear;
+}
+
+.health-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 3px var(--ink);
+}
+
+/* Floating numbers */
+
+.floaters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floater {
+  position: absolute;
+  top: 0.5rem;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  font-weight: bold;
+  text-shadow: 0 0 4px var(--parchment-light);
+  animation-name: float-up;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.floater-damage {
+  color: var(--hp);
+}
+.floater-blocked {
+  color: var(--shield);
+  font-size: 1.2rem;
+}
+.floater-heal {
+  color: var(--heal);
+}
+.floater-shield {
+  color: var(--shield);
+}
+
+@keyframes float-up {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.2);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -2.5rem) scale(1);
+  }
+}
+
+/* Enemy cast bar (telegraph) */
+
+.cast-bar {
+  position: relative;
+  margin-top: 0.75rem;
+  min-height: 3rem;
+  padding: 0.4rem 0.8rem;
+  border: 2px solid var(--indigo);
+  border-radius: 6px;
+  background: var(--parchment-light);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 1rem;
+}
+
+.cast-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--indigo) 22%, transparent);
+  transition: width 60ms linear;
+}
+
+.cast-bar-heavy {
+  border-color: var(--fire);
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+
+.cast-bar-heavy .cast-fill {
+  background: color-mix(in srgb, var(--fire) 28%, transparent);
+}
+
+.cast-bar-idle {
+  border-style: dashed;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.cast-name {
+  position: relative;
+  font-weight: bold;
+}
+
+.cast-effect {
+  position: relative;
+  grid-row: 2;
+  font-size: 0.9rem;
+}
+
+.cast-time {
+  position: relative;
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+}
+
+@keyframes pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--fire) 40%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--fire) 0%, transparent);
+  }
+}
+
+/* Log */
+
+.combat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  align-self: end;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.combat-log li:not(:last-child) {
+  opacity: 0.6;
+}
+
+/* Player area */
+
+.player-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.inkwell-label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  text-align: right;
+}
+
+.inkwell-pips {
+  display: flex;
+  gap: 3px;
+}
+
+.ink-pip {
+  position: relative;
+  width: 0.9rem;
+  height: 1.4rem;
+  border: 2px solid var(--ink);
+  border-radius: 0 0 0.45rem 0.45rem;
+  background: var(--parchment-light);
+  overflow: hidden;
+}
+
+.ink-pip-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: var(--ink-fill);
+}
+
+/* Hand */
+
+.hand {
+  margin-top: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.turn-banner {
+  margin: 0.8rem 0 0;
+  min-height: 1.3em;
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.your-turn .turn-banner {
+  font-style: normal;
+  font-weight: bold;
+  color: var(--indigo);
+}
+
+.combat-middle {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Timeline */
+
+.timeline {
+  margin: 0.5rem 0.5rem 0 0.5rem;
+}
+
+.timeline-track {
+  position: relative;
+  height: 4.5rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.timeline-now {
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 2px;
+  height: calc(100% + 6px);
+  background: var(--indigo);
+}
+
+.timeline-cast {
+  position: absolute;
+  bottom: 0;
+  height: 0.5rem;
+  background: color-mix(in srgb, var(--indigo) 25%, transparent);
+}
+
+.timeline-marker {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-marker::after {
+  content: '';
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-bottom: -0.45rem;
+  border-radius: 50%;
+  background: var(--indigo);
+  border: 2px solid var(--parchment-light);
+}
+
+.timeline-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.timeline-label small {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+.timeline-enemy.harmful::after {
+  background: var(--fire);
+}
+
+.timeline-enemy.harmful .timeline-label {
+  color: var(--fire);
+  font-weight: bold;
+}
+
+.timeline-you {
+  top: calc(100% + 0.2rem);
+  bottom: auto;
+  flex-direction: column-reverse;
+}
+
+.timeline-you::after {
+  margin: -0.85rem 0 0;
+  background: var(--heal);
+}
+
+.timeline-you .timeline-label {
+  margin: 0.3rem 0 0;
+  color: var(--heal);
+  font-weight: bold;
+}
+
+.timeline-ghost {
+  opacity: 0.75;
+}
+
+.timeline-unknown .timeline-label {
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.timeline-scale {
+  position: relative;
+  height: 2.6rem;
+  font-size: 0.65rem;
+  color: var(--ink-soft);
+}
+
+.timeline-scale span {
+  position: absolute;
+  top: 1.7rem;
+  transform: translateX(-50%);
+}
+
+.spell-card {
+  --accent: var(--neutral);
+  position: relative;
+  min-height: 10rem;
+  padding: 0.6rem 0.5rem 0.5rem;
+  border: 2px solid var(--accent);
+  border-top-width: 6px;
+  border-radius: 8px;
+  background: var(--parchment-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  touch-action: none;
+  transition:
+    transform 120ms ease-out,
+    opacity 120ms;
+}
+
+.spell-card:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
+.spell-card.dragging {
+  transition: none;
+  z-index: 2;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 25%);
+}
+
+.spell-card.armed {
+  outline: 3px solid var(--accent);
+}
+
+.spell-card.unaffordable {
+  opacity: 0.55;
+}
+
+.spell-card.unaffordable .spell-cost {
+  background: var(--neutral);
+}
+
+.spell-card.shake {
+  animation: shake 300ms;
+}
+
+.element-fire {
+  --accent: var(--fire);
+}
+.element-ice {
+  --accent: var(--ice);
+}
+.element-arcane {
+  --accent: var(--arcane);
+}
+.element-ward {
+  --accent: var(--ward);
+}
+
+.spell-cost {
+  position: absolute;
+  top: -0.8rem;
+  left: -0.6rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  background: var(--ink-fill);
+  color: #fff;
+  font-weight: bold;
+}
+
+.spell-name {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.spell-type {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+}
+
+.spell-text {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.spell-time {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--indigo-soft);
+}
+
+.spell-hint {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.hint-warning {
+  color: var(--fire);
+}
+
+.hint-info {
+  color: var(--shield);
+}
+
+.key-hint {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.4rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+/* Controls */
+
+.controls {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.controls button[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--parchment-light);
+}
+
+/* Overlays */
+
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--parchment) 75%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.veil-title {
+  margin: 0;
+  font-size: 2.5rem;
+  color: var(--indigo);
+}
+
+.veil-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* Death: the loser's pages burn or blur */
+
+.status-won .combatant-enemy {
+  animation: burn 900ms forwards;
+}
+
+.status-lost .combat-player {
+  animation: blur-out 900ms forwards;
+}
+
+@keyframes burn {
+  to {
+    filter: sepia(1) saturate(3) hue-rotate(-20deg) brightness(0.6);
+    opacity: 0.4;
+  }
+}
+
+@keyframes blur-out {
+  to {
+    filter: blur(3px);
+    opacity: 0.5;
+  }
+}
+
+/* Phone width */
+
+@media (max-width: 560px) {
+  .combat {
+    gap: 0.6rem;
+  }
+
+  .player-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inkwell-label {
+    text-align: left;
+  }
+
+  .ink-pip {
+    flex: 1;
+    width: auto;
+  }
+
+  .hand {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem 0.35rem;
+  }
+
+  .spell-card {
+    min-height: 8.5rem;
+    padding: 0.5rem 0.25rem 0.35rem;
+  }
+
+  .spell-name {
+    font-size: 0.85rem;
+  }
+
+  .spell-text {
+    font-size: 0.75rem;
+  }
+
+  .spell-type,
+  .key-hint {
+    display: none;
+  }
+}

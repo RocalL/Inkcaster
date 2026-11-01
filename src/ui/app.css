@@ -1,12 +1,32 @@
 :root {
-  --ink: #111018;
+  --ink: #15131f;
+  --ink-soft: #4a4560;
   --indigo: #1e1b4b;
+  --indigo-soft: #3b3784;
   --parchment: #f1e6cc;
+  --parchment-light: #f8f1de;
   --parchment-shade: #d9c79f;
+  --line: #b9a57a;
+
+  --fire: #b3261e;
+  --ice: #1f5fa8;
+  --arcane: #6b3fa0;
+  --ward: #2f6b5b;
+  --neutral: #6b6150;
+
+  --hp: #8c2f2a;
+  --shield: #3a6fa8;
+  --heal: #2f7a3a;
+  --ink-fill: #1e1b4b;
 
   color: var(--ink);
-  background: radial-gradient(circle at 50% 40%, var(--parchment), var(--parchment-shade));
+  background: radial-gradient(circle at 50% 35%, var(--parchment), var(--parchment-shade));
   font-family: Georgia, 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -14,21 +34,122 @@ body {
   min-height: 100vh;
 }
 
-.title-page {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  padding: 0 16px;
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--indigo);
+  background: var(--parchment-light);
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
 }
 
-.title-page h1 {
+button:hover:not(:disabled) {
+  background: #fffaf0;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--indigo-soft);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+button.quiet {
+  border-color: transparent;
+  background: transparent;
+  text-decoration: underline;
+}
+
+kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75em;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 0.3em;
+  margin-left: 0.3em;
+  opacity: 0.75;
+}
+
+/* Menu */
+
+.menu {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 3rem 16px;
+  text-align: center;
+}
+
+.menu h1 {
   margin: 0;
-  font-size: clamp(2.5rem, 10vw, 5rem);
+  font-size: clamp(2.5rem, 10vw, 4.5rem);
   color: var(--indigo);
   letter-spacing: 0.04em;
 }
 
 .tagline {
   font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.menu h2 {
+  margin-top: 2.5rem;
+  font-size: 1.1rem;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+}
+
+.rivals {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rival {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border-width: 2px;
+}
+
+.rival-name {
+  font-size: 1.3rem;
+  color: var(--indigo);
+}
+
+.rival-meta {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.how-to {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.how-to summary {
+  cursor: pointer;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.how-to li {
+  margin: 0.35rem 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

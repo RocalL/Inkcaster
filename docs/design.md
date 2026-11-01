@@ -12,14 +12,19 @@ Inkcaster is a solo, browser-based **roguelite deckbuilder** with **die-and-retr
 4. Whether you win or die, you earn gold: more for deeper progress, a small consolation on death.
 5. Spend gold in the **Scriptorium** (the hub) on permanent progression, then start a new run.
 
-## Combat: semi-real-time (default, to be confirmed)
+## Combat: timeline turns
 
-- **Ink** (mana) regenerates continuously and is shown as an inkwell.
-- The hand holds 4-5 cards. Casting a card sends it to cooldown, then it cycles back.
-- Enemy inkcasters cast on their own timers, with a **telegraphed cast bar**, so counters and interrupts matter.
-- Minions act on their own attack timers. Enchantments tick over time.
-- A **slow-time / pause** option is required for accessibility.
-- The engine must stay flexible enough to support a **turn-based mode** as a fallback.
+Decided after the first playtest (2026-11-01). Real time rewarded click speed over decisions.
+
+- **Time only moves when you act.** On your turn the clock is frozen. You cast one page or **gather ink** (1s).
+- **Every page has a time cost.** After casting, your next turn comes that many seconds later. Fast weak pages and slow strong pages are a real trade-off.
+- **One shared timeline.** Rival inkcasters cast on it with a **telegraphed cast bar**. The screen shows when each rival spell lands, and where your next turn would fall for each page.
+- **Ink** regenerates with timeline time, not per turn. Scarce ink plus time costs means you can't cast everything.
+- **The hand** holds 5 pages. A cast page is discarded and replaced immediately, so holding pages is free. `draw` grows the hand up to 7.
+- **Wards absorb only the next hit.** Whatever is left is lost, and this applies to rivals too. Timing a ward against the right spell, and breaking a rival's ward with a small hit before a big one, are core decisions.
+- Rivals with a fixed rotation are fully predictable on the timeline. Weighted rivals only reveal a spell when its cast bar starts.
+- Later (Phase 3): minions and enchantments act on the timeline; counters and interrupts cancel or delay rival casts.
+- Deliberately unlike Slay the Spire: no energy refill per turn, no discard-hand-at-end-of-turn, no block that resets every turn. Tempo is about time, not turns.
 
 ## Spell types
 
@@ -60,7 +65,7 @@ Reference only; the real types will live in `src/engine` and `src/data`.
   name: "Ember Bolt",
   type: "direct",            // direct | enchantment | minion | ward | counter | utility
   cost: 2,                   // ink
-  cooldown: 3.0,             // seconds
+  time: 1.25,                // timeline cost in seconds
   tags: ["fire"],
   effects: [{ kind: "damage", amount: 6, target: "enemy" }],
   upgrades: [

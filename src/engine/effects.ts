@@ -32,12 +32,12 @@ function resolveTarget(caster: Side, target: EffectTarget): Side {
   return caster === 'player' ? 'enemy' : 'player'
 }
 
-/** Shield absorbs damage first; the rest comes off hp. */
+/** A ward absorbs the next hit only: what it doesn't absorb comes off hp, and it is used up. */
 function dealDamage(ctx: StepContext, target: Side, amount: number): void {
   const combatant = getCombatant(ctx.state, target)
   const absorbed = Math.min(combatant.shield, amount)
   const taken = Math.min(combatant.hp, amount - absorbed)
-  combatant.shield -= absorbed
+  combatant.shield = 0
   combatant.hp -= taken
   ctx.events.push({ type: 'damage', target, amount: taken, absorbed })
 

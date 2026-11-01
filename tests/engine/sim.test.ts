@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { greedyBot, runDuel, step, type CombatState } from '../../src/engine/index.ts'
-import { cast, makeCombat, makeContent, run } from './fixtures.ts'
+import {
+  greedyBot,
+  isPlayerTurn,
+  runDuel,
+  step,
+  type CombatState,
+  type PlayerCommand,
+} from '../../src/engine/index.ts'
+import { advance, cast, makeCombat, makeContent } from './fixtures.ts'
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object') {
@@ -31,15 +38,16 @@ describe('step', () => {
       player: { grimoire: ['bolt', 'ward', 'study', 'bolt'] },
     })
     let state: CombatState = deepFreeze(makeCombat(content))
-    for (let tick = 0; tick < 200; tick++) {
-      state = deepFreeze(step(content, state, tick % 7 === 0 ? [cast(tick % 2)] : []).state)
+    for (let turn = 0; state.tick < 200; turn++) {
+      const command: PlayerCommand = turn % 3 === 2 ? { type: 'wait' } : cast(turn % 2)
+      state = deepFreeze(step(content, state, isPlayerTurn(state) ? [command] : []).state)
     }
     expect(state.tick).toBe(200)
   })
 
-  it('advances the tick counter', () => {
+  it('advances the tick counter while time flows', () => {
     const content = makeContent()
-    expect(run(content, makeCombat(content), 3).state.tick).toBe(3)
+    expect(advance(content, makeCombat(content), 3).state.tick).toBe(3)
   })
 
   it('is a no-op once the combat is over', () => {

@@ -10,7 +10,7 @@ export type Effect =
   | { kind: 'damage'; amount: number; target?: EffectTarget } // default: enemy
   | { kind: 'heal'; amount: number; target?: EffectTarget } // default: self
   | { kind: 'shield'; amount: number; target?: EffectTarget } // default: self
-  | { kind: 'draw'; count: number } // player only: refills recharging hand slots
+  | { kind: 'draw'; count: number } // player only: adds pages to the hand, up to MAX_HAND_SIZE
 
 export type EffectKind = Effect['kind']
 
@@ -22,8 +22,8 @@ export interface SpellDef {
   type: SpellType
   /** Ink cost. */
   cost: number
-  /** Seconds the hand slot recharges before drawing the next page. */
-  cooldown: number
+  /** Timeline cost: seconds that pass before the caster's next turn. */
+  time: number
   tags: readonly string[]
   effects: readonly Effect[]
 }
@@ -59,6 +59,7 @@ export interface PlayerSetup {
   startingInk: number
   /** Ink regenerated per second. */
   inkPerSecond: number
+  /** Pages in hand at the start; casting refills back up to this. */
   handSize: number
   /** Spell ids; duplicates allowed. */
   grimoire: readonly string[]

@@ -13,8 +13,8 @@ export const STARTER_PLAYER: PlayerSetup = {
   maxHp: 50,
   maxInk: 10,
   startingInk: 3,
-  inkPerSecond: 1,
-  handSize: 4,
+  inkPerSecond: 0.8,
+  handSize: 5,
   grimoire: STARTER_SPELLS.map((spell) => spell.id),
 }
 

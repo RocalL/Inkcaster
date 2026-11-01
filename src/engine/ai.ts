@@ -2,9 +2,9 @@
 
 import { applyEffects } from './effects.ts'
 import { nextRandom, type RngState } from './rng.ts'
-import type { EnemyState, StepContext } from './state.ts'
+import type { CombatState, EnemyState, StepContext } from './state.ts'
 import { durationTicks, secondsToTicks } from './time.ts'
-import type { EnemyDef } from './types.ts'
+import type { CombatContent, EnemyDef } from './types.ts'
 
 export function tickEnemy(ctx: StepContext): void {
   const enemy = ctx.state.enemy
@@ -33,6 +33,56 @@ export function tickEnemy(ctx: StepContext): void {
   enemy.cast = { spellIndex, totalTicks: castTicks, remainingTicks: castTicks }
   enemy.castsStarted += 1
   ctx.events.push({ type: 'enemyCastStart', spellId: spell.id, castTicks })
+}
+
+export interface EnemyAction {
+  /** null when a 'weighted' rival hasn't picked its spell yet. */
+  spellId: string | null
+  /** Clock tick at which the cast bar appears. */
+  startsAt: number
+  /** Clock tick by which the effects have resolved; null when the spell isn't known yet. */
+  landsAt: number | null
+}
+
+/**
+ * The rival's next actions on the timeline, as far as they can be known: the current cast,
+ * then for 'rotation' rivals the next ones in order. An action "lands before your turn"
+ * when `landsAt <= player.readyAt`.
+ */
+export function forecastEnemy(
+  content: CombatContent,
+  state: CombatState,
+  count = 3,
+): EnemyAction[] {
+  const def = content.enemy
+  const enemy = state.enemy
+  const gap = Math.max(1, secondsToTicks(def.castGap))
+  const actions: EnemyAction[] = []
+
+  let nextStart: number
+  if (enemy.cast) {
+    const landsAt = state.tick + enemy.cast.remainingTicks
+    const spell = def.spells[enemy.cast.spellIndex]
+    actions.push({ spellId: spell?.id ?? null, startsAt: landsAt - enemy.cast.totalTicks, landsAt })
+    nextStart = landsAt + gap
+  } else {
+    nextStart = state.tick + Math.max(1, enemy.idleTicks)
+  }
+
+  let castsStarted = enemy.castsStarted
+  while (actions.length < count) {
+    if (def.behaviour !== 'rotation') {
+      actions.push({ spellId: null, startsAt: nextStart, landsAt: null })
+      break
+    }
+    const spell = def.spells[castsStarted % def.spells.length]
+    if (!spell) break
+    const landsAt = nextStart + durationTicks(spell.castTime)
+    actions.push({ spellId: spell.id, startsAt: nextStart, landsAt })
+    castsStarted += 1
+    nextStart = landsAt + gap
+  }
+  return actions
 }
 
 export function chooseEnemySpell(

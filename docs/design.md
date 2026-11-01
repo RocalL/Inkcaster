@@ -7,7 +7,7 @@ Inkcaster is a solo, browser-based **roguelite deckbuilder** with **die-and-retr
 ## Core loop
 
 1. Start a run with a **weak starter deck** (8-10 basic spells).
-2. Fight a **linear chain of 6 duels** against rival inkcasters, then the boss (The Archivist). The whole path is visible from the start, and rivals get tougher each floor.
+2. Fight a **linear chain of 6 duels** against rival inkcasters, then a boss drawn from three (The Archivist, The Pyre Queen, The Inquisitor). The whole path is visible from the start, and rivals get tougher each floor.
 3. Your HP carries over between duels, with 40% healed after each win. After each win, gain gold and add **1 of 3** offered words to your grimoire (or skip).
 4. Whether you win or die, you earn gold: more for deeper progress, a small consolation on death.
 5. Spend gold in the **Scriptorium** (the hub) on permanent progression, then start a new run.
@@ -44,6 +44,14 @@ Statuses:
 - **Thorns**: whoever hits you takes N, even when your ward absorbs the hit; it drops by 1 each turn.
 - **Regen**: heals N at the start of your turn, then drops by 1.
 
+Phase 6 added more statuses:
+
+- **Brand**: the next hit taken deals +N, even through a ward.
+- **Stain**: the holder takes N whenever it casts, through wards, then Stain drops by 1.
+- **Inspire**: draw N more words next turn.
+
+It also added **piercing** damage (Lance, the Piercing modifier), **Vampiric** (heal 50% of the damage dealt), **Purge** (removes Burn, Chill, Brand and Stain) and **Redact** (like Erase, but it can strike the verb, so the rival's spell fizzles). The full list is in `src/data/words.ts` (60 words).
+
 **Familiars** (minions) strike at the end of their owner's turn for a few turns; each side can have at most 4. Rally makes them strike immediately. **Blot** cancels the rival's next spell. It is player-only, because rivals show their spells in advance.
 
 ## Archetypes (target: 5 for v1)
@@ -66,6 +74,10 @@ A new profile starts with the **Apprentice** grimoire and 10 core words (Strike,
 - **Loadouts:** unlock an archetype's starting grimoire, which also unlocks its words (100).
 - **Rewrite:** upgrade a word permanently, tier I to III (30, then 60). Each tier adds about 25% to its numbers (at least +1); scaling words gain +2 base damage. Higher tiers show more ornate borders and an "II" / "III" mark.
 - **Bindings:** passive ranks: Vellum Skin (+5 max HP, 3 ranks), Warded Cover (start each duel with Ward 3, 2 ranks), Mending Thread (+10% heal after wins, 2 ranks), Gilded Margins (+20% gold, 2 ranks), Wide Shelf (+1 reward choice), Deep Inkwell (+1 hand size).
+
+There are 20 Bindings in total (see `src/data/scriptorium.ts`): starting statuses, an extra word slot, extra starting words, a heal before the boss, death gold, rare-word odds, and weaker rivals or bosses.
+
+**Ascension:** winning a run at your highest level unlocks the next, up to 5. The levels stack: +15% rival HP, 15% less healing after wins, +30% boss HP, one fewer reward choice, rivals start each duel with Ward 6. Each level gives +10% gold.
 
 The profile and any run in progress are saved between duels. Abandoning a run keeps no gold.
 

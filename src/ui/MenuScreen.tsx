@@ -1,4 +1,5 @@
 import { BOSS_IDS, ENEMIES, LOADOUTS, RUN_CONTENT } from '../data/index.ts'
+import { ASCENSIONS } from '../data/ascension.ts'
 import { LOADOUT_UNLOCK_COST } from '../data/scriptorium.ts'
 import { useDuelStore } from './combat/store.ts'
 import { useProfileStore } from './meta/store.ts'
@@ -7,7 +8,7 @@ import { useRunStore } from './run/store.ts'
 export function MenuScreen() {
   const profile = useProfileStore((store) => store.profile)
   const persistent = useProfileStore((store) => store.persistent)
-  const { selectLoadout, openScriptorium } = useProfileStore.getState()
+  const { selectLoadout, selectAscension, openScriptorium } = useProfileStore.getState()
   const startDuel = useDuelStore((store) => store.startDuel)
   const { startRun, resumeRun } = useRunStore.getState()
   const floors = RUN_CONTENT.floors.length
@@ -41,7 +42,8 @@ export function MenuScreen() {
             Resume run
           </button>
           <p className="begin-hint">
-            {LOADOUTS.find((loadout) => loadout.id === saved.loadoutId)?.name} · floor{' '}
+            {LOADOUTS.find((loadout) => loadout.id === saved.loadoutId)?.name}
+            {saved.ascension > 0 ? ` · Ascension ${saved.ascension}` : ''} · floor{' '}
             {saved.run.floor + 1} of {saved.run.path.length} · {saved.run.hp} HP
           </p>
         </div>
@@ -74,6 +76,31 @@ export function MenuScreen() {
               )
             })}
           </ul>
+
+          {profile.ascensionUnlocked > 0 && (
+            <div className="ascension">
+              <h2>Ascension</h2>
+              <div className="ascension-levels" role="group" aria-label="Ascension level">
+                {Array.from({ length: profile.ascensionUnlocked + 1 }, (_, level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    aria-pressed={level === profile.selectedAscension}
+                    onClick={() => selectAscension(level)}
+                  >
+                    {level === 0 ? 'None' : level}
+                  </button>
+                ))}
+              </div>
+              <p className="ascension-rules">
+                {profile.selectedAscension === 0
+                  ? 'Win a run at your highest level to unlock the next.'
+                  : ASCENSIONS.filter((rule) => rule.level <= profile.selectedAscension)
+                      .map((rule) => rule.description)
+                      .join(' · ') + ` · +${profile.selectedAscension * 10}% gold`}
+              </p>
+            </div>
+          )}
 
           <div className="begin">
             <button

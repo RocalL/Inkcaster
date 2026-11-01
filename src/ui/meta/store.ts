@@ -16,6 +16,7 @@ interface ProfileStore {
   update: (change: (profile: Profile) => Profile) => void
   buy: (purchase: Purchase) => void
   selectLoadout: (loadoutId: string) => void
+  selectAscension: (level: number) => void
   openScriptorium: () => void
   closeScriptorium: () => void
 }
@@ -44,6 +45,13 @@ export const useProfileStore = create<ProfileStore>()((set, get) => ({
     get().update((profile) =>
       profile.unlockedLoadouts.includes(loadoutId)
         ? { ...profile, selectedLoadout: loadoutId }
+        : profile,
+    ),
+
+  selectAscension: (level) =>
+    get().update((profile) =>
+      level >= 0 && level <= profile.ascensionUnlocked
+        ? { ...profile, selectedAscension: level }
         : profile,
     ),
 

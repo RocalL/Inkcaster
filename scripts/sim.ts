@@ -18,7 +18,7 @@ import {
 } from '../src/data/index.ts'
 import { greedyBot, rarestReward, runDuel, runRun, type DuelResult } from '../src/engine/index.ts'
 import { autoLoadout, autoSpend } from '../src/meta/autobuy.ts'
-import { bankRun, newProfile, runContentFor } from '../src/meta/profile.ts'
+import { bankRun, newProfile, runContentFor, runDeckFor } from '../src/meta/profile.ts'
 import { describeEvent } from '../src/ui/text.ts'
 
 const { values } = parseArgs({
@@ -58,15 +58,23 @@ if (values.log) {
 if (values.progression) {
   const players = 40
   const runsEach = 20
-  const rows = Array.from({ length: runsEach }, () => ({ wins: 0, floors: 0, gold: 0, spent: 0 }))
+  const rows = Array.from({ length: runsEach }, () => ({
+    wins: 0,
+    floors: 0,
+    gold: 0,
+    spent: 0,
+    ascension: 0,
+  }))
   for (let player = 0; player < players; player++) {
     let profile = newProfile()
     for (let index = 0; index < runsEach; index++) {
       const loadoutId = autoLoadout(profile)
+      // Always climb: play at the highest ascension unlocked so far.
+      const ascension = profile.ascensionUnlocked
       const seed = firstSeed + player * 1000 + index
       const { run, floorsCleared } = runRun(
-        runContentFor(profile),
-        getLoadout(loadoutId).deck,
+        runContentFor(profile, ascension),
+        runDeckFor(profile, loadoutId),
         seed,
         greedyBot,
         rarestReward,
@@ -76,17 +84,19 @@ if (values.progression) {
       row.wins += run.phase === 'won' ? 1 : 0
       row.floors += floorsCleared
       row.gold += run.gold
-      const banked = bankRun(profile, run)
+      row.ascension += ascension
+      const banked = bankRun(profile, run, ascension)
       profile = autoSpend(banked)
       row.spent += banked.gold - profile.gold
     }
   }
   console.log(`${players} profiles, ${runsEach} runs each, spending gold between runs\n`)
-  console.log('run   win    avg floors  gold earned  gold spent')
+  console.log('run   asc   win    avg floors  gold earned  gold spent')
   rows.forEach((row, index) => {
     console.log(
       [
         String(index + 1).padEnd(6),
+        (row.ascension / players).toFixed(1).padEnd(6),
         `${((row.wins / players) * 100).toFixed(0)}%`.padEnd(7),
         (row.floors / players).toFixed(1).padEnd(12),
         (row.gold / players).toFixed(0).padEnd(13),

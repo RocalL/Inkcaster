@@ -38,7 +38,10 @@ function strength(fighter: Fighter): number {
     statuses.burn * 1.5 +
     statuses.regen * 1.2 +
     statuses.focus * 0.8 +
-    statuses.thorns * 0.8 +
+    statuses.thorns * 0.8 -
+    statuses.brand * 1 -
+    statuses.stain * 1.5 +
+    statuses.inspire * 1.5 +
     minionDamage * 0.7 +
     (fighter.echo ? 4 : 0)
   )
@@ -49,9 +52,8 @@ function candidateCommands(state: DuelState, content: DuelContent): PlayerComman
   const kindOf = (index: number) => getWord(content, hand[index]?.wordId ?? '').kind
   const verbs = hand.flatMap((_, index) => (kindOf(index) === 'verb' ? [index] : []))
   const others = hand.flatMap((_, index) => (kindOf(index) === 'verb' ? [] : [index]))
-  const eraseTargets = state.enemy.intent.flatMap((word, index) =>
-    !word.erased && getWord(content, word.wordId).kind !== 'verb' ? [index] : [],
-  )
+  // Every word still standing; Erase on a verb is rejected by the engine, Redact allows it.
+  const eraseTargets = state.enemy.intent.flatMap((word, index) => (word.erased ? [] : [index]))
 
   const commands: PlayerCommand[] = [
     { type: 'discard', words: [] },

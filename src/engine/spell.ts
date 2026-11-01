@@ -21,6 +21,8 @@ export type ComposeResult =
       extraWords: number
       /** Number of words in the sentence; counted by 'spellWords' scaling. */
       wordCount: number
+      /** Share of the spell's damage the caster heals (Vampiric). */
+      lifesteal: number
     }
   | { ok: false; reason: 'needOneVerb' }
 
@@ -49,6 +51,9 @@ export function composeSpell(
   let echo = false
   let extraWords = 0
   let edits = 0
+  let intensify = 0
+  let lifesteal = 0
+  let pierce = false
   const inkEffects: Effect[] = []
   for (const word of words) {
     if (word.kind === 'modifier') {
@@ -56,7 +61,10 @@ export function composeSpell(
       if (modifier.type === 'amplify') amplify += modifier.amount
       else if (modifier.type === 'repeat') times *= modifier.times
       else if (modifier.type === 'echo') echo = true
-      else extraWords += modifier.words
+      else if (modifier.type === 'expand') extraWords += modifier.words
+      else if (modifier.type === 'intensify') intensify += modifier.amount
+      else if (modifier.type === 'lifesteal') lifesteal += modifier.share
+      else pierce = true
     } else if (word.kind === 'ink') {
       inkEffects.push(...word.effects)
     } else if (word.kind === 'edit') {
@@ -64,9 +72,27 @@ export function composeSpell(
     }
   }
 
-  const once = [...verb.effects.map((effect) => amplifyEffect(effect, amplify)), ...inkEffects]
+  const once = [...verb.effects.map((effect) => amplifyEffect(effect, amplify)), ...inkEffects].map(
+    (effect) => {
+      if (effect.kind === 'applyStatus' && intensify > 0) {
+        return { ...effect, stacks: effect.stacks + intensify }
+      }
+      if (effect.kind === 'damage' && pierce) return { ...effect, pierce: true }
+      return effect
+    },
+  )
   const effects = Array.from({ length: times }, () => once).flat()
-  return { ok: true, once, times, effects, edits, echo, extraWords, wordCount: words.length }
+  return {
+    ok: true,
+    once,
+    times,
+    effects,
+    edits,
+    echo,
+    extraWords,
+    wordCount: words.length,
+    lifesteal: Math.min(1, lifesteal),
+  }
 }
 
 function amplifyEffect(effect: Effect, amount: number): Effect {

@@ -15,6 +15,7 @@ describe('composeSpell', () => {
       echo: false,
       extraWords: 0,
       wordCount: 1,
+      lifesteal: 0,
     })
   })
 

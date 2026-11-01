@@ -25,7 +25,7 @@ const content: RunContent = {
   },
   player: { maxHp: 30, handSize: 4, maxWords: 3 },
   floors: [['dummy', 'brute'], ['dummy', 'brute'], ['brute']],
-  bossId: 'boss',
+  bossIds: ['boss'],
   rewardPool: [
     { wordId: 'strike', rarity: 'common' },
     { wordId: 'ward', rarity: 'common' },

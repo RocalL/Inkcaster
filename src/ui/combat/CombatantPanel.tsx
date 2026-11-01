@@ -11,6 +11,9 @@ const STATUS_ICONS: Record<StatusId, string> = {
   focus: '✦',
   thorns: '❦',
   regen: '❧',
+  brand: '⚑',
+  stain: '☁',
+  inspire: '✎',
 }
 
 interface Props {

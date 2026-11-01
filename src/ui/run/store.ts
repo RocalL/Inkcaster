@@ -3,7 +3,6 @@
 // the duel store.
 
 import { create } from 'zustand'
-import { getLoadout } from '../../data/index.ts'
 import {
   chooseReward,
   createRun,
@@ -15,13 +14,15 @@ import {
   type RunContent,
   type RunState,
 } from '../../engine/index.ts'
-import { bankRun, runContentFor } from '../../meta/profile.ts'
+import { bankRun, runContentFor, runDeckFor } from '../../meta/profile.ts'
 import { useDuelStore } from '../combat/store.ts'
 import { useProfileStore } from '../meta/store.ts'
 
 interface RunStore {
   run: RunState | null
   loadoutId: string | null
+  /** Ascension level of the current run. */
+  ascension: number
   /** Run content with the profile's rewrites and bindings, fixed for the whole run. */
   content: RunContent | null
   startRun: (loadoutId: string, seed?: number) => void
@@ -38,35 +39,40 @@ interface RunStore {
 export const useRunStore = create<RunStore>()((set, get) => {
   /** Sets the run and keeps the profile in step: saved while running, banked once over. */
   const setRun = (run: RunState) => {
-    const { loadoutId } = get()
+    const { loadoutId, ascension } = get()
     set({ run })
     useProfileStore
       .getState()
       .update((profile) =>
         run.phase === 'won' || run.phase === 'lost'
-          ? bankRun(profile, run)
-          : { ...profile, currentRun: loadoutId ? { loadoutId, run } : null },
+          ? bankRun(profile, run, ascension)
+          : { ...profile, currentRun: loadoutId ? { loadoutId, ascension, run } : null },
       )
   }
 
   return {
     run: null,
     loadoutId: null,
+    ascension: 0,
     content: null,
 
     startRun: (loadoutId, seed = Math.floor(Math.random() * 2 ** 31)) => {
-      const content = runContentFor(useProfileStore.getState().profile)
-      set({ loadoutId, content })
-      setRun(createRun(content, getLoadout(loadoutId).deck, seed))
+      const { profile } = useProfileStore.getState()
+      const ascension = profile.selectedAscension
+      const content = runContentFor(profile, ascension)
+      set({ loadoutId, ascension, content })
+      setRun(createRun(content, runDeckFor(profile, loadoutId), seed))
     },
 
     resumeRun: () => {
       const { profile } = useProfileStore.getState()
-      if (!profile.currentRun) return
+      const saved = profile.currentRun
+      if (!saved) return
       set({
-        run: profile.currentRun.run,
-        loadoutId: profile.currentRun.loadoutId,
-        content: runContentFor(profile),
+        run: saved.run,
+        loadoutId: saved.loadoutId,
+        ascension: saved.ascension,
+        content: runContentFor(profile, saved.ascension),
       })
     },
 
@@ -87,8 +93,8 @@ export const useRunStore = create<RunStore>()((set, get) => {
     },
 
     chooseReward: (wordId) => {
-      const { run } = get()
-      if (run) setRun(chooseReward(run, wordId))
+      const { run, content } = get()
+      if (run && content) setRun(chooseReward(run, wordId, content.economy))
     },
 
     leaveRun: () => {
@@ -96,7 +102,7 @@ export const useRunStore = create<RunStore>()((set, get) => {
       if (run && run.phase !== 'won' && run.phase !== 'lost') {
         useProfileStore.getState().update((profile) => ({ ...profile, currentRun: null }))
       }
-      set({ run: null, loadoutId: null, content: null })
+      set({ run: null, loadoutId: null, ascension: 0, content: null })
     },
   }
 })

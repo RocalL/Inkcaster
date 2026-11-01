@@ -62,6 +62,15 @@
 .badge-regen {
   color: var(--heal);
 }
+.badge-brand {
+  color: var(--fire);
+}
+.badge-stain {
+  color: var(--ink-soft);
+}
+.badge-inspire {
+  color: var(--arcane);
+}
 
 /* Familiars */
 

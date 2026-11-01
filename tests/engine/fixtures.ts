@@ -101,6 +101,46 @@ export const TEST_WORDS: Record<string, WordDef> = Object.fromEntries(
         element: 'verdant',
         effects: [{ kind: 'applyStatus', status: 'regen', stacks: 3, target: 'self' }],
       },
+      // Phase 6 mechanics
+      {
+        id: 'lance',
+        name: 'Lance',
+        kind: 'verb',
+        effects: [{ kind: 'damage', amount: 5, pierce: true }],
+      },
+      {
+        id: 'brand',
+        name: 'Brand',
+        kind: 'verb',
+        effects: [{ kind: 'applyStatus', status: 'brand', stacks: 4 }],
+      },
+      {
+        id: 'hex',
+        name: 'Hex',
+        kind: 'verb',
+        effects: [{ kind: 'applyStatus', status: 'stain', stacks: 3 }],
+      },
+      {
+        id: 'ponder',
+        name: 'Ponder',
+        kind: 'verb',
+        effects: [{ kind: 'applyStatus', status: 'inspire', stacks: 2, target: 'self' }],
+      },
+      { id: 'purge', name: 'Purge', kind: 'verb', effects: [{ kind: 'cleanse' }] },
+      {
+        id: 'intensify',
+        name: 'Intensify',
+        kind: 'modifier',
+        modifier: { type: 'intensify', amount: 2 },
+      },
+      {
+        id: 'vampiric',
+        name: 'Vampiric',
+        kind: 'modifier',
+        modifier: { type: 'lifesteal', share: 0.5 },
+      },
+      { id: 'piercing', name: 'Piercing', kind: 'modifier', modifier: { type: 'pierce' } },
+      { id: 'redact', name: 'Redact', kind: 'edit', edit: 'redact' },
     ] satisfies WordDef[]
   ).map((word) => [word.id, word]),
 )

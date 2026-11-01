@@ -7,7 +7,7 @@ Solo, browser-based roguelite deckbuilder with die-and-retry meta-progression. Y
 - Decisions (open and settled): [docs/decisions.md](docs/decisions.md)
 - Deferred work: [docs/todo.md](docs/todo.md)
 
-**Current phase: 5 — Scriptorium (built; waiting for the meta-progression playtest).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
+**Current phase: 7 — Polish (not started; Phase 6 content targets reached, playtest recommended first).** Read the roadmap entry for this phase before starting work. Do not start a phase until the previous one meets its "done when".
 
 ## Commands
 
@@ -46,7 +46,8 @@ src/
     run.ts      run: path of floors, HP carry-over, gold, rewards; runRun (headless)
     rewrite.ts  word upgrades (tiers I-III), one generic rule
     bot.ts      greedy player: tries every legal sentence with the real engine
-  data/     Words, rivals, loadouts, run floors / rewards / economy as data (imports engine types)
+  data/     Words, rivals, loadouts, run floors / rewards / economy, scriptorium catalog,
+            ascension levels, as data (imports engine types)
   meta/     Pure profile rules (profile.ts: purchases, bindings, content per profile, bankRun),
             save.ts (versioned save + migrations, IndexedDB), autobuy.ts (sim spending policy)
   ui/       React screens: Menu, Scriptorium, Run, Duel, Rewards
@@ -70,7 +71,7 @@ Engine model in one paragraph: duels are **spellwriting** turns (see docs/design
 4. **The save format is versioned.** `SAVE_VERSION` in `src/meta/save.ts`; every bump adds an entry to `MIGRATIONS` plus a test. The profile embeds `RunState`, so changing `RunState` also changes the save format. Ask before changing it.
 5. **Every effect kind has unit tests.**
 
-Effect vocabulary (keep it small and composable): `damage` (optional `scaling`), `heal`, `shield`, `applyStatus`, `draw`, `summon`, `rally`, `counter`. Statuses: burn, chill, focus, thorns, regen. Modifiers: repeat, amplify, echo, expand. Word kinds: verb, modifier, ink, edit. The word data shape is in [docs/design.md](docs/design.md#word-data-shape).
+Effect vocabulary (keep it small and composable): `damage` (optional `scaling`, `pierce`), `heal`, `shield`, `applyStatus`, `draw`, `summon`, `rally`, `counter`, `cleanse`. Statuses: burn, chill, focus, thorns, regen, brand, stain, inspire. Modifiers: repeat, amplify, echo, expand, intensify, lifesteal, pierce. Edits: erase, redact. Word kinds: verb, modifier, ink, edit. The word data shape is in [docs/design.md](docs/design.md#word-data-shape).
 
 ## Vocabulary
 

@@ -2,7 +2,7 @@
 // then the start of the player's next turn. Pure: the input state is never mutated.
 
 import { chooseIntent } from './ai.ts'
-import { applyEffects, endTurnMinions, startTurnStatuses } from './effects.ts'
+import { applyEffects, endTurnMinions, stainOnCast, startTurnStatuses } from './effects.ts'
 import type { CombatEvent, RejectReason } from './events.ts'
 import { discardFromHand, refillHand } from './hand.ts'
 import { applyChill, composeSpell, type ComposeResult } from './spell.ts'
@@ -171,11 +171,12 @@ function castSpell(
       : { type: 'spellWritten', side: caster, words: wordIds },
   )
   if (!spell.ok) return
+  if (!stainOnCast(ctx, caster)) return
   const effects = applyChill(spell.effects, fighter.statuses.chill)
   fighter.statuses.chill = 0
   fighter.statuses.focus = 0
   if (spell.echo && !isEcho) fighter.echo = wordIds
-  applyEffects(ctx, caster, effects, { wordCount: spell.wordCount })
+  applyEffects(ctx, caster, effects, { wordCount: spell.wordCount, lifesteal: spell.lifesteal })
 }
 
 function validate(
@@ -202,9 +203,12 @@ function validate(
   if (erase.length !== words.filter((word) => word.kind === 'edit').length) {
     return 'eraseTargetCount'
   }
-  for (const target of erase) {
+  const edits = words.flatMap((word) => (word.kind === 'edit' ? [word.edit] : []))
+  for (const [i, target] of erase.entries()) {
     const word = state.enemy.intent[target]
-    if (!word || word.erased || getWord(content, word.wordId).kind === 'verb') {
+    // Erase cannot touch the verb; Redact can.
+    const verbAllowed = edits[i] === 'redact'
+    if (!word || word.erased || (!verbAllowed && getWord(content, word.wordId).kind === 'verb')) {
       return 'badEraseTarget'
     }
   }

@@ -4,15 +4,16 @@ import type { RewardDef, RunEconomy } from '../engine/index.ts'
 
 /** Candidate rivals per floor; one is picked per floor when the run starts. */
 export const RUN_FLOORS: readonly (readonly string[])[] = [
-  ['ash_adept', 'frost_scribe'],
-  ['ash_adept', 'frost_scribe'],
-  ['ash_adept', 'frost_scribe', 'inkling_mother'],
-  ['bramble_warden', 'inkling_mother'],
-  ['bramble_warden', 'inkling_mother', 'frost_scribe'],
-  ['bramble_warden', 'inkling_mother', 'ash_adept'],
+  ['ash_adept', 'frost_scribe', 'hex_weaver'],
+  ['ash_adept', 'frost_scribe', 'storm_caller', 'blood_scribe'],
+  ['inkling_mother', 'storm_caller', 'blood_scribe', 'hex_weaver'],
+  ['bramble_warden', 'golem_wright', 'censor', 'inkling_mother'],
+  ['bramble_warden', 'golem_wright', 'censor', 'blood_scribe'],
+  ['censor', 'golem_wright', 'bramble_warden', 'hex_weaver'],
 ]
 
-export const RUN_BOSS_ID = 'archivist'
+/** One of these ends each run. */
+export const RUN_BOSS_IDS: readonly string[] = ['archivist', 'pyre_queen', 'inquisitor']
 
 /** Words that can be offered after a win. */
 export const REWARD_POOL: readonly RewardDef[] = [
@@ -26,6 +27,13 @@ export const REWARD_POOL: readonly RewardDef[] = [
   { wordId: 'ice', rarity: 'common' },
   { wordId: 'arcane', rarity: 'common' },
   { wordId: 'erase', rarity: 'common' },
+  { wordId: 'scribble', rarity: 'common' },
+  { wordId: 'cinder', rarity: 'common' },
+  { wordId: 'frostbite', rarity: 'common' },
+  { wordId: 'bloom', rarity: 'common' },
+  { wordId: 'thornlash', rarity: 'common' },
+  { wordId: 'storm', rarity: 'common' },
+  { wordId: 'stone', rarity: 'common' },
   { wordId: 'kindle', rarity: 'uncommon' },
   { wordId: 'ignite', rarity: 'uncommon' },
   { wordId: 'freeze', rarity: 'uncommon' },
@@ -40,10 +48,35 @@ export const REWARD_POOL: readonly RewardDef[] = [
   { wordId: 'thorn', rarity: 'uncommon' },
   { wordId: 'verdant', rarity: 'uncommon' },
   { wordId: 'echo', rarity: 'uncommon' },
+  { wordId: 'lance', rarity: 'uncommon' },
+  { wordId: 'volley', rarity: 'uncommon' },
+  { wordId: 'brand', rarity: 'uncommon' },
+  { wordId: 'hex', rarity: 'uncommon' },
+  { wordId: 'ponder', rarity: 'uncommon' },
+  { wordId: 'rime', rarity: 'uncommon' },
+  { wordId: 'swarm', rarity: 'uncommon' },
+  { wordId: 'bastion', rarity: 'uncommon' },
+  { wordId: 'retaliate', rarity: 'uncommon' },
+  { wordId: 'purge', rarity: 'uncommon' },
+  { wordId: 'leech', rarity: 'uncommon' },
+  { wordId: 'hymn', rarity: 'uncommon' },
+  { wordId: 'cinderwall', rarity: 'uncommon' },
+  { wordId: 'intensify', rarity: 'uncommon' },
+  { wordId: 'vampiric', rarity: 'uncommon' },
+  { wordId: 'shadow', rarity: 'uncommon' },
+  { wordId: 'ash', rarity: 'uncommon' },
+  { wordId: 'dawn', rarity: 'uncommon' },
   { wordId: 'thrice', rarity: 'rare' },
   { wordId: 'verbose', rarity: 'rare' },
   { wordId: 'blot', rarity: 'rare' },
   { wordId: 'litany', rarity: 'rare' },
+  { wordId: 'smite', rarity: 'rare' },
+  { wordId: 'torrent', rarity: 'rare' },
+  { wordId: 'conflagrate', rarity: 'rare' },
+  { wordId: 'golem', rarity: 'rare' },
+  { wordId: 'aegis', rarity: 'rare' },
+  { wordId: 'piercing', rarity: 'rare' },
+  { wordId: 'redact', rarity: 'rare' },
 ]
 
 export const RUN_ECONOMY: RunEconomy = {

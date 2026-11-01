@@ -20,6 +20,7 @@ import {
   type BindingDef,
   type BindingStat,
 } from '../data/scriptorium.ts'
+import { ASCENSION_GOLD_BONUS, ASCENSION_RULES, MAX_ASCENSION } from '../data/ascension.ts'
 import {
   MAX_TIER,
   isRewritable,
@@ -48,8 +49,17 @@ export interface Profile {
   bindings: Record<string, number>
   stats: ProfileStats
   selectedLoadout: string
+  /** Highest ascension level unlocked (0 = none). Winning at a level unlocks the next. */
+  ascensionUnlocked: number
+  selectedAscension: number
   /** The run in progress, saved between duels. */
-  currentRun: { loadoutId: string; run: RunState } | null
+  currentRun: SavedRun | null
+}
+
+export interface SavedRun {
+  loadoutId: string
+  ascension: number
+  run: RunState
 }
 
 export function newProfile(): Profile {
@@ -61,6 +71,8 @@ export function newProfile(): Profile {
     bindings: {},
     stats: { runs: 0, wins: 0, bestFloors: 0, goldEarned: 0 },
     selectedLoadout: STARTING_LOADOUTS[0] ?? 'apprentice',
+    ascensionUnlocked: 0,
+    selectedAscension: 0,
     currentRun: null,
   }
 }
@@ -139,28 +151,79 @@ export function bindingBonus(profile: Profile, stat: BindingStat): number {
 
 // --- Content with the profile applied ---------------------------------------
 
-/** Run content with rewrites, bindings and only unlocked reward words. */
-export function runContentFor(profile: Profile): RunContent {
+/**
+ * Run content with the profile applied: rewrites, bindings, only unlocked reward words, and
+ * the chosen ascension level (each level includes the ones below it).
+ */
+export function runContentFor(profile: Profile, ascension = 0): RunContent {
   const economy = RUN_CONTENT.economy
+  const bonus = (stat: BindingStat) => bindingBonus(profile, stat)
+  const level = Math.max(0, Math.min(ascension, MAX_ASCENSION))
+  const rules = ASCENSION_RULES
+  const rivalHp = (1 + bonus('rivalHp')) * (level >= 1 ? 1 + rules.rivalHp : 1)
+  const bossHp = (1 + bonus('bossHp')) * (level >= 3 ? 1 + rules.bossHp : 1)
+  const rivalWard = level >= 5 ? rules.rivalWard : 0
+
+  const startingStatuses = {
+    focus: bonus('startingFocus'),
+    thorns: bonus('startingThorns'),
+    regen: bonus('startingRegen'),
+  }
   return {
     ...RUN_CONTENT,
     words: rewriteWords(RUN_CONTENT.words, profile.rewrites),
+    enemies:
+      rivalWard > 0
+        ? Object.fromEntries(
+            Object.entries(RUN_CONTENT.enemies).map(([id, enemy]) => [
+              id,
+              { ...enemy, startingWard: (enemy.startingWard ?? 0) + rivalWard },
+            ]),
+          )
+        : RUN_CONTENT.enemies,
     player: {
       ...RUN_CONTENT.player,
-      maxHp: RUN_CONTENT.player.maxHp + bindingBonus(profile, 'maxHp'),
-      handSize: RUN_CONTENT.player.handSize + bindingBonus(profile, 'handSize'),
-      startingWard: bindingBonus(profile, 'startingWard'),
+      maxHp: RUN_CONTENT.player.maxHp + bonus('maxHp'),
+      handSize: RUN_CONTENT.player.handSize + bonus('handSize'),
+      maxWords: RUN_CONTENT.player.maxWords + bonus('maxWords'),
+      startingWard: bonus('startingWard'),
+      startingStatuses,
     },
     rewardPool: RUN_CONTENT.rewardPool.filter((reward) =>
       profile.unlockedWords.includes(reward.wordId),
     ),
     economy: {
       ...economy,
-      healAfterWin: economy.healAfterWin + bindingBonus(profile, 'healAfterWin'),
-      goldMultiplier: (economy.goldMultiplier ?? 1) + bindingBonus(profile, 'goldMultiplier'),
-      rewardChoices: economy.rewardChoices + bindingBonus(profile, 'rewardChoices'),
+      rivalHpScale: economy.rivalHpScale.map((scale) => scale * rivalHp),
+      bossHpScale: (economy.bossHpScale ?? 1) * bossHp,
+      healAfterWin: Math.max(
+        0,
+        economy.healAfterWin + bonus('healAfterWin') + (level >= 2 ? rules.healAfterWin : 0),
+      ),
+      healBeforeBoss: (economy.healBeforeBoss ?? 0) + bonus('healBeforeBoss'),
+      goldMultiplier:
+        (economy.goldMultiplier ?? 1) + bonus('goldMultiplier') + level * ASCENSION_GOLD_BONUS,
+      deathGoldShare: Math.min(1, economy.deathGoldShare + bonus('deathGoldShare')),
+      rewardChoices: Math.max(
+        1,
+        economy.rewardChoices + bonus('rewardChoices') + (level >= 4 ? rules.rewardChoices : 0),
+      ),
+      rarityWeights: {
+        ...economy.rarityWeights,
+        rare: economy.rarityWeights.rare + bonus('rareWeight'),
+      },
     },
   }
+}
+
+/** The starting grimoire of a run: the loadout plus words from 'startWord' bindings. */
+export function runDeckFor(profile: Profile, loadoutId: string): string[] {
+  const extra = BINDINGS.flatMap((binding) =>
+    binding.stat === 'startWord' && binding.wordId
+      ? Array.from({ length: profile.bindings[binding.id] ?? 0 }, () => binding.wordId ?? '')
+      : [],
+  )
+  return [...getLoadout(loadoutId).deck, ...extra]
 }
 
 /** A practice duel with the profile's rewrites and bindings. */
@@ -172,22 +235,29 @@ export function practiceContentFor(
   const run = runContentFor(profile)
   return {
     words: run.words,
-    player: { ...run.player, deck: getLoadout(loadoutId).deck },
+    player: { ...run.player, deck: runDeckFor(profile, loadoutId) },
     enemy: getEnemy(enemyId),
   }
 }
 
 // --- Runs -------------------------------------------------------------------
 
-/** Records a finished run: banks its gold and updates the stats. */
-export function bankRun(profile: Profile, run: RunState): Profile {
+/**
+ * Records a finished run: banks its gold and updates the stats. Winning at the highest
+ * unlocked ascension level unlocks the next one.
+ */
+export function bankRun(profile: Profile, run: RunState, ascension = 0): Profile {
   if (run.phase !== 'won' && run.phase !== 'lost') return profile
   const won = run.phase === 'won'
   const floors = won ? run.path.length : run.floor
+  const unlocksNext = won && ascension >= profile.ascensionUnlocked
   return {
     ...profile,
     gold: profile.gold + run.gold,
     currentRun: null,
+    ascensionUnlocked: unlocksNext
+      ? Math.min(MAX_ASCENSION, ascension + 1)
+      : profile.ascensionUnlocked,
     stats: {
       runs: profile.stats.runs + 1,
       wins: profile.stats.wins + (won ? 1 : 0),
@@ -213,6 +283,12 @@ export function cleanProfile(profile: Profile): Profile {
     selectedLoadout: loadouts.includes(profile.selectedLoadout)
       ? profile.selectedLoadout
       : (loadouts[0] ?? 'apprentice'),
+    ascensionUnlocked: clamp(profile.ascensionUnlocked, 0, MAX_ASCENSION),
+    selectedAscension: clamp(
+      profile.selectedAscension,
+      0,
+      clamp(profile.ascensionUnlocked, 0, MAX_ASCENSION),
+    ),
     // A saved run that points at removed rivals cannot be resumed.
     currentRun:
       profile.currentRun &&
@@ -220,4 +296,8 @@ export function cleanProfile(profile: Profile): Profile {
         ? profile.currentRun
         : null,
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Number.isFinite(value) ? Math.max(min, Math.min(max, Math.floor(value))) : min
 }

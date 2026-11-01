@@ -62,6 +62,7 @@ function rewriteEffect(effect: Effect, tier: 2 | 3): Effect {
       return { ...effect, bonus: effect.bonus + (tier - 1) }
     case 'draw':
     case 'counter':
+    case 'cleanse':
       return effect
   }
 }

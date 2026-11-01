@@ -9,8 +9,8 @@ Work on **one phase at a time**. Do not start a phase until the previous one mee
 | [x]  | 2. Playable combat UI          | Spellwriting duel: hand of words, writing desk, rival intent, erase, statuses                                           | One duel with 10-12 placeholder spells is **fun** (stop and playtest here)  |
 | [x]  | 3. Spell depth                 | Statuses, minions, enchantments, counters, tag synergies, ~30 spells                                                    | 5 archetypes feel distinct                                                  |
 | [x]  | 4. Run structure               | 6-8 duel chain, boss, reward choice (1 of 3), gold, death screen                                                        | A full run can be played start to finish                                    |
-| [ ]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
-| [ ]  | 6. Content                     | 8-10 enemies + 2-3 bosses, 60-80 spells, 20+ bindings, ascension mode                                                   | Content targets reached                                                     |
+| [x]  | 5. Scriptorium                 | Save/load, Grimoire, Rewrite, Bindings, Loadouts, economy pass                                                          | Die, spend gold, feel stronger next run                                     |
+| [x]  | 6. Content                     | 8-10 enemies + 2-3 bosses, 60-80 spells, 20+ bindings, ascension mode                                                   | Content targets reached                                                     |
 | [ ]  | 7. Polish                      | Art, VFX, audio, tutorial, glossary tooltips, settings, mobile/touch, 60 fps                                            | Feels juicy and onboardable                                                 |
 | [ ]  | 8. Balance and release         | Bot balance sims, playtests, error logging, PWA, release page                                                           | Public release                                                              |
 
@@ -90,4 +90,18 @@ Translated to spellwriting: "spells" are now words; statuses, minions, lasting e
 - [x] Save: versioned (v1) in IndexedDB via idb-keyval, migration table, run saved between duels; plays without saving if storage fails or hangs
 - [x] UI: Scriptorium (4 tabs), menu with gold, stats, locked grimoires, Resume run; tier marks on rewritten words
 - [x] Economy pass: `npm run sim -- --progression` (bot run wins: 23% on run 1, about 50% by run 7, 80-88% from run 11)
-- [ ] **Playtest: die, spend gold, feel stronger next run?** This is the "done when"; stop here
+- [x] Playtest: the meta loop works. Phase 5 done (2026-11-01). Saving in a real browser not yet verified (see todo)
+
+## Phase 6 checklist
+
+The "done when" is content targets, checked by `tests/data/data.test.ts`.
+
+- [x] Words: 60 (target 60-80). New: Cinder, Conflagrate, Cinderwall, Frostbite, Rime, Golem, Swarm, Scribble, Ponder, Hymn, Aegis, Bastion, Retaliate, Thornlash, Bloom, Brand, Hex, Purge, Lance, Smite, Volley, Torrent, Leech; Intensify, Vampiric, Piercing; Storm, Shadow, Ash, Dawn, Stone; Redact
+- [x] Statuses: 8 (target 8-10). New: Brand, Stain, Inspire
+- [x] New mechanics: piercing damage, lifesteal, cleanse, Redact (strike any word), rivals' starting ward, starting statuses
+- [x] Rivals: 9 + 3 bosses (target 8-10 + 2-3). New: Hex Weaver, Storm Caller, Blood Scribe, Golem Wright, The Censor; bosses The Pyre Queen and The Inquisitor; each run draws one boss
+- [x] Bindings: 20 (target 20+)
+- [x] Ascension: 5 levels, unlocked by winning; +10% gold per level
+- [x] Save v2 with a v1 migration (ascension fields)
+- [x] Sims: duel matrix (6 x 12), runs, progression climbing ascension
+- [x] Content targets reached. Phase 6 done (2026-11-01). A quick playtest of the new words and rivals is recommended before Phase 7

@@ -71,7 +71,16 @@ export interface ActionContext {
   events: CombatEvent[]
 }
 
-export const NO_STATUSES: Statuses = { burn: 0, chill: 0, focus: 0, thorns: 0, regen: 0 }
+export const NO_STATUSES: Statuses = {
+  burn: 0,
+  chill: 0,
+  focus: 0,
+  thorns: 0,
+  regen: 0,
+  brand: 0,
+  stain: 0,
+  inspire: 0,
+}
 
 /** Most minions one side can have at once; extra summons fizzle. */
 export const MAX_MINIONS = 4
@@ -133,7 +142,7 @@ export function createInitialState(content: DuelContent, seed: number): DuelStat
       hp: Math.min(player.startingHp ?? player.maxHp, player.maxHp),
       maxHp: player.maxHp,
       ward: player.startingWard ?? 0,
-      statuses: { ...NO_STATUSES },
+      statuses: { ...NO_STATUSES, ...player.startingStatuses },
       minions: [],
       echo: null,
       hand: deck.slice(0, player.handSize),
@@ -143,7 +152,7 @@ export function createInitialState(content: DuelContent, seed: number): DuelStat
     enemy: {
       hp: enemy.maxHp,
       maxHp: enemy.maxHp,
-      ward: 0,
+      ward: enemy.startingWard ?? 0,
       statuses: { ...NO_STATUSES },
       minions: [],
       echo: null,

@@ -4,7 +4,7 @@ import type { Side, StatusId } from './types.ts'
 // and the debug log read them; nothing in the engine depends on them.
 
 /** Where non-spell damage comes from. */
-export type DamageSource = 'burn' | 'thorns' | 'minion'
+export type DamageSource = 'burn' | 'thorns' | 'minion' | 'stain'
 
 export type RejectReason =
   'badWordIndex' | 'needOneVerb' | 'tooManyWords' | 'badEraseTarget' | 'eraseTargetCount'
@@ -15,7 +15,7 @@ export type CombatEvent =
   | { type: 'wordsDiscarded'; count: number }
   | { type: 'intent'; words: string[] }
   | { type: 'damage'; target: Side; amount: number; absorbed: number; source?: DamageSource }
-  | { type: 'heal'; target: Side; amount: number; source?: 'regen' }
+  | { type: 'heal'; target: Side; amount: number; source?: 'regen' | 'lifesteal' }
   | { type: 'shield'; target: Side; amount: number }
   | { type: 'statusApplied'; target: Side; status: StatusId; stacks: number }
   | { type: 'wordDrawn'; wordId: string }
@@ -24,5 +24,6 @@ export type CombatEvent =
   | { type: 'minionSummoned'; side: Side; name: string; attack: number; turns: number }
   | { type: 'minionFaded'; side: Side; name: string }
   | { type: 'spellCountered'; side: Side }
+  | { type: 'cleansed'; side: Side }
   | { type: 'echo'; side: Side; words: string[] }
   | { type: 'death'; side: Side }

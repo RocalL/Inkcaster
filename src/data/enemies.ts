@@ -67,4 +67,92 @@ export const ENEMIES: readonly EnemyDef[] = [
       { words: ['strike', 'thrice'] },
     ],
   },
+  {
+    id: 'hex_weaver',
+    name: 'Hex Weaver',
+    maxHp: 46,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['hex'] },
+      { words: ['shadow', 'strike', 'twice'] },
+      { words: ['greater', 'ward'] },
+      { words: ['brand'] },
+      { words: ['smite'] },
+    ],
+  },
+  {
+    id: 'storm_caller',
+    name: 'Storm Caller',
+    maxHp: 44,
+    behaviour: 'weighted',
+    spells: [
+      { words: ['volley'], weight: 3 },
+      { words: ['storm', 'strike', 'twice'], weight: 2 },
+      { words: ['torrent', 'greater'], weight: 1 },
+      { words: ['stone', 'ward'], weight: 1 },
+    ],
+  },
+  {
+    id: 'blood_scribe',
+    name: 'Blood Scribe',
+    maxHp: 46,
+    behaviour: 'weighted',
+    spells: [
+      { words: ['vampiric', 'strike', 'twice'], weight: 3 },
+      { words: ['leech'], weight: 2 },
+      { words: ['storm', 'strike', 'twice'], weight: 2 },
+      { words: ['bloom'], weight: 1 },
+    ],
+  },
+  {
+    id: 'golem_wright',
+    name: 'Golem Wright',
+    maxHp: 52,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['golem'] },
+      { words: ['stone', 'strike'] },
+      { words: ['greater', 'rally'] },
+      { words: ['greater', 'ward'] },
+    ],
+  },
+  {
+    id: 'censor',
+    name: 'The Censor',
+    maxHp: 50,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['lance'] },
+      { words: ['piercing', 'strike', 'twice'] },
+      { words: ['aegis'] },
+      { words: ['greater', 'lance'] },
+    ],
+  },
+  {
+    // Boss. Stacks Burn on you, then Conflagrates it: Purge or Erase the Fire words.
+    id: 'pyre_queen',
+    name: 'The Pyre Queen',
+    maxHp: 70,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['greater', 'kindle'] },
+      { words: ['cinder', 'twice'] },
+      { words: ['cinderwall', 'fire'] },
+      { words: ['conflagrate', 'greater'] },
+    ],
+  },
+  {
+    // Boss. Brands you, then Smites: keep a ward or Redact the Smite.
+    id: 'inquisitor',
+    name: 'The Inquisitor',
+    maxHp: 70,
+    behaviour: 'rotation',
+    spells: [
+      { words: ['brand', 'intensify'] },
+      { words: ['greater', 'smite'] },
+      { words: ['hex'] },
+      { words: ['piercing', 'volley'] },
+      { words: ['aegis', 'thorn'] },
+    ],
+  },
 ]

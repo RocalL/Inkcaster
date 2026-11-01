@@ -3,9 +3,9 @@
 // adds a migration from the previous version, so old saves keep loading.
 
 import { get, set } from 'idb-keyval'
-import { cleanProfile, newProfile, type Profile } from './profile.ts'
+import { cleanProfile, newProfile, type Profile, type SavedRun } from './profile.ts'
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 export const SAVE_KEY = 'inkcaster/profile'
 
 export interface SaveFile {
@@ -13,11 +13,24 @@ export interface SaveFile {
   profile: Profile
 }
 
-/**
- * MIGRATIONS[n] turns a version n save into a version n + 1 save. Empty until the first bump.
- * Example for a future v2: `1: (save) => ({ version: 2, profile: { ...save.profile, newField: 0 } })`.
- */
-const MIGRATIONS: Record<number, (save: SaveFile) => SaveFile> = {}
+/** MIGRATIONS[n] turns a version n save into a version n + 1 save. Never edit an old entry. */
+const MIGRATIONS: Record<number, (save: SaveFile) => SaveFile> = {
+  // v2 (Phase 6): ascension levels; a saved run remembers its ascension.
+  1: (save) => {
+    const old = save.profile as Omit<Profile, 'ascensionUnlocked' | 'selectedAscension'> & {
+      currentRun: Omit<SavedRun, 'ascension'> | null
+    }
+    return {
+      version: 2,
+      profile: {
+        ...old,
+        ascensionUnlocked: 0,
+        selectedAscension: 0,
+        currentRun: old.currentRun ? { ...old.currentRun, ascension: 0 } : null,
+      },
+    }
+  },
+}
 
 export function serialize(profile: Profile): SaveFile {
   return { version: SAVE_VERSION, profile }

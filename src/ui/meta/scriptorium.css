@@ -166,3 +166,21 @@
   font-size: 0.85rem;
   color: var(--fire);
 }
+
+.ascension-levels {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.ascension-levels button[aria-pressed='true'] {
+  background: var(--fire);
+  border-color: var(--fire);
+  color: var(--parchment-light);
+}
+
+.ascension-rules {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}

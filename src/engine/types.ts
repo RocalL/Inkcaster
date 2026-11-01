@@ -12,8 +12,15 @@ export type EffectTarget = 'self' | 'enemy'
  * focus: its next spell gets +N to the verb's numbers, then clears.
  * thorns: whenever it is hit, the attacker takes N; -1 at the start of its turn.
  * regen: heals N at the start of its turn, then -1.
+ * brand: the next hit it takes deals +N (even through wards), then clears.
+ * stain: takes N damage whenever it casts a spell (through wards), then -1.
+ * inspire: draws N more words at the start of its next turn, then clears (player only).
  */
-export type StatusId = 'burn' | 'chill' | 'focus' | 'thorns' | 'regen'
+export type StatusId =
+  'burn' | 'chill' | 'focus' | 'thorns' | 'regen' | 'brand' | 'stain' | 'inspire'
+
+/** Statuses that Purge removes: the harmful ones. */
+export const HARMFUL_STATUSES: readonly StatusId[] = ['burn', 'chill', 'brand', 'stain']
 
 /** What a scaling damage effect counts, from the caster's point of view. */
 export type ScaleSource = 'targetBurn' | 'targetChill' | 'ownWard' | 'spellWords'
@@ -35,7 +42,14 @@ export interface MinionDef {
 }
 
 export type Effect =
-  | { kind: 'damage'; amount: number; target?: EffectTarget; scaling?: Scaling } // default: enemy
+  | {
+      kind: 'damage'
+      amount: number
+      target?: EffectTarget // default: enemy
+      scaling?: Scaling
+      /** Ignores the target's ward (the ward stays up). */
+      pierce?: boolean
+    }
   | { kind: 'heal'; amount: number; target?: EffectTarget } // default: self
   | { kind: 'shield'; amount: number; target?: EffectTarget } // default: self
   | { kind: 'applyStatus'; status: StatusId; stacks: number; target?: EffectTarget } // default: enemy
@@ -43,6 +57,7 @@ export type Effect =
   | { kind: 'summon'; minion: MinionDef } // joins the caster's side
   | { kind: 'rally'; bonus: number } // the caster's minions strike now, each +bonus
   | { kind: 'counter' } // player only: the rival's next spell is cancelled
+  | { kind: 'cleanse' } // removes the caster's harmful statuses
 
 export type EffectKind = Effect['kind']
 
@@ -55,8 +70,15 @@ export type Modifier =
   | { type: 'echo' }
   /** The sentence may hold this many more words. */
   | { type: 'expand'; words: number }
+  /** Adds to every status applied by the spell, inks included. */
+  | { type: 'intensify'; amount: number }
+  /** The caster heals this share (0-1) of the damage the spell deals, rounded down. */
+  | { type: 'lifesteal'; share: number }
+  /** The spell's damage ignores wards. */
+  | { type: 'pierce' }
 
-export type EditKind = 'erase'
+/** erase: strike a non-verb word of the rival's next spell. redact: strike any word, verb too. */
+export type EditKind = 'erase' | 'redact'
 
 interface WordBase {
   id: string
@@ -94,6 +116,8 @@ export interface EnemyDef {
   id: string
   name: string
   maxHp: number
+  /** Ward at the start of each duel. Defaults to 0. */
+  startingWard?: number
   behaviour: EnemyBehaviour
   spells: readonly EnemySpellDef[]
 }
@@ -104,6 +128,8 @@ export interface PlayerSetup {
   startingHp?: number
   /** Ward at the start of each duel (a Binding). Defaults to 0. */
   startingWard?: number
+  /** Statuses at the start of each duel (Bindings), e.g. { focus: 2 }. */
+  startingStatuses?: Partial<Record<StatusId, number>>
   /** The hand is refilled to this size after each of your turns. */
   handSize: number
   /** Most words in one spell, verb included. */

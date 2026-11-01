@@ -26,6 +26,10 @@ export interface RunEconomy {
   healAfterWin: number
   /** Rival max HP multiplier per regular floor (index = floor), so the run ramps up. */
   rivalHpScale: readonly number[]
+  /** Boss max HP multiplier. Defaults to 1. */
+  bossHpScale?: number
+  /** HP healed when stepping onto the boss floor. Defaults to 0. */
+  healBeforeBoss?: number
   rewardChoices: number
   rarityWeights: Record<Rarity, number>
 }
@@ -36,7 +40,8 @@ export interface RunContent {
   player: Omit<PlayerSetup, 'deck' | 'startingHp'>
   /** Candidate rival ids for each regular floor, in order. */
   floors: readonly (readonly string[])[]
-  bossId: string
+  /** One of these is drawn as the run's boss. */
+  bossIds: readonly string[]
   rewardPool: readonly RewardDef[]
   economy: RunEconomy
 }
@@ -74,7 +79,9 @@ export function createRun(content: RunContent, deck: readonly string[], seed: nu
     rng = next
     path.push(pool[index] ?? candidates[0] ?? '')
   }
-  path.push(content.bossId)
+  const [bossIndex, next] = randomInt(rng, content.bossIds.length)
+  rng = next
+  path.push(content.bossIds[bossIndex] ?? content.bossIds[0] ?? '')
   for (const id of path) getRunEnemy(content, id)
 
   return {
@@ -99,7 +106,9 @@ export function isBossFloor(run: RunState): boolean {
 /** The duel for the current floor: the run's deck and HP against a floor-scaled rival. */
 export function floorDuelContent(content: RunContent, run: RunState): DuelContent {
   const base = getRunEnemy(content, run.path[run.floor] ?? '')
-  const scale = isBossFloor(run) ? 1 : (content.economy.rivalHpScale[run.floor] ?? 1)
+  const scale = isBossFloor(run)
+    ? (content.economy.bossHpScale ?? 1)
+    : (content.economy.rivalHpScale[run.floor] ?? 1)
   const enemy = { ...base, maxHp: Math.max(1, Math.round(base.maxHp * scale)) }
   return {
     words: content.words,
@@ -150,14 +159,22 @@ export function finishDuel(content: RunContent, run: RunState, duel: DuelState):
 }
 
 /** Reward -> map: adds the chosen word (or nothing) and moves to the next floor. */
-export function chooseReward(run: RunState, wordId: string | null): RunState {
+export function chooseReward(
+  run: RunState,
+  wordId: string | null,
+  economy?: Pick<RunEconomy, 'healBeforeBoss'>,
+): RunState {
   if (run.phase !== 'reward') return run
   if (wordId !== null && !run.rewardOptions.includes(wordId)) return run
+  const floor = run.floor + 1
+  const toBoss = floor === run.path.length - 1
+  const heal = toBoss ? (economy?.healBeforeBoss ?? 0) : 0
   return {
     ...run,
     phase: 'map',
     deck: wordId === null ? run.deck : [...run.deck, wordId],
-    floor: run.floor + 1,
+    floor,
+    hp: Math.min(run.maxHp, run.hp + heal),
     rewardOptions: [],
     duelSeed: null,
   }
@@ -214,7 +231,7 @@ export function runRun(
     const duel = runDuel(floorDuelContent(content, run), run.duelSeed ?? 0, policy)
     if (duel.outcome === 'timeout') throw new Error(`Duel timed out on floor ${run.floor}`)
     run = finishDuel(content, run, duel.state)
-    if (run.phase === 'reward') run = chooseReward(run, rewardPolicy(run, content))
+    if (run.phase === 'reward') run = chooseReward(run, rewardPolicy(run, content), content.economy)
   }
   const floorsCleared = run.phase === 'won' ? run.path.length : run.floor
   return { run, floorsCleared }

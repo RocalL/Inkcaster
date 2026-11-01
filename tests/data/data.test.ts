@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   BASE_PLAYER,
+  BOSS_IDS,
   ENEMIES,
   LOADOUTS,
+  REWARD_POOL,
+  RUN_CONTENT,
   WORDS,
   WORDS_BY_ID,
   duelContent,
 } from '../../src/data/index.ts'
-import { composeSpell, type Effect } from '../../src/engine/index.ts'
+import { BINDINGS, STARTING_WORDS } from '../../src/data/scriptorium.ts'
+import { NO_STATUSES, composeSpell, type Effect } from '../../src/engine/index.ts'
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/
 
@@ -36,6 +40,7 @@ function checkEffect(effect: Effect): void {
       expect(effect.bonus).toBeGreaterThanOrEqual(0)
       return
     case 'counter':
+    case 'cleanse':
       return
   }
 }
@@ -90,9 +95,39 @@ describe('loadouts', () => {
 })
 
 describe('content targets', () => {
-  it('Phase 3: about 30 words and 5 archetype loadouts', () => {
-    expect(WORDS.length).toBeGreaterThanOrEqual(28)
+  it('v1 targets (Phase 6): 60-80 words, 8-10 rivals + 2-3 bosses, 8-10 statuses, 20+ bindings', () => {
+    expect(WORDS.length).toBeGreaterThanOrEqual(60)
+    expect(WORDS.length).toBeLessThanOrEqual(80)
+    const bosses = ENEMIES.filter((enemy) => BOSS_IDS.includes(enemy.id))
+    expect(ENEMIES.length - bosses.length).toBeGreaterThanOrEqual(8)
+    expect(bosses.length).toBeGreaterThanOrEqual(2)
+    expect(Object.keys(NO_STATUSES).length).toBeGreaterThanOrEqual(8)
+    expect(BINDINGS.length).toBeGreaterThanOrEqual(20)
     expect(LOADOUTS.length).toBeGreaterThanOrEqual(6)
+  })
+
+  it('every word is either a starting word or can be unlocked as a reward', () => {
+    const rewardIds = REWARD_POOL.map((reward) => reward.wordId)
+    expect(new Set(rewardIds).size).toBe(rewardIds.length)
+    for (const word of WORDS) {
+      expect(STARTING_WORDS.includes(word.id) || rewardIds.includes(word.id), word.id).toBe(true)
+    }
+  })
+
+  it('bindings have unique ids, and start-word bindings name a real word', () => {
+    const ids = BINDINGS.map((binding) => binding.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const binding of BINDINGS) {
+      expect(binding.costs.length, binding.id).toBeGreaterThan(0)
+      if (binding.stat === 'startWord') expect(WORDS_BY_ID[binding.wordId ?? '']).toBeDefined()
+    }
+  })
+
+  it('every run floor and boss names a real rival', () => {
+    for (const floor of RUN_CONTENT.floors) {
+      for (const id of floor) expect(RUN_CONTENT.enemies[id], id).toBeDefined()
+    }
+    for (const id of RUN_CONTENT.bossIds) expect(RUN_CONTENT.enemies[id], id).toBeDefined()
   })
 
   it('rivals never use player-only effects (draw, counter)', () => {

@@ -33,7 +33,7 @@ describe('save format', () => {
     profile = buy(profile, { type: 'rewrite', id: 'strike' })
     profile = {
       ...profile,
-      currentRun: { loadoutId: 'warden', run: createRun(RUN_CONTENT, ['strike'], 3) },
+      currentRun: { loadoutId: 'warden', ascension: 0, run: createRun(RUN_CONTENT, ['strike'], 3) },
     }
     expect(deserialize(structuredClone(serialize(profile)))).toEqual(profile)
   })

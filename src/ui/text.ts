@@ -18,6 +18,9 @@ export const STATUS_NAMES: Record<StatusId, string> = {
   focus: 'Focus',
   thorns: 'Thorns',
   regen: 'Regen',
+  brand: 'Brand',
+  stain: 'Stain',
+  inspire: 'Inspire',
 }
 
 export const STATUS_RULES: Record<StatusId, string> = {
@@ -26,6 +29,10 @@ export const STATUS_RULES: Record<StatusId, string> = {
   focus: "Its next spell gets that much more on the verb's numbers. Then Focus clears.",
   thorns: 'Whenever it is hit, the attacker takes that much damage. Drops by 1 each turn.',
   regen: 'Heals that much at the start of its turn, then drops by 1.',
+  brand: 'The next hit it takes deals that much more, even through a ward. Then Brand clears.',
+  stain:
+    'Whenever it casts a spell, it takes that much damage (through wards), then Stain drops by 1.',
+  inspire: 'Draws that many more words at the start of its next turn.',
 }
 
 const SCALE_TEXT: Record<ScaleSource, string> = {
@@ -41,9 +48,10 @@ export function describeEffect(effect: Effect): string {
       const scaling = effect.scaling
         ? `, +${effect.scaling.each} ${SCALE_TEXT[effect.scaling.per]}`
         : ''
+      const pierce = effect.pierce ? ', piercing wards' : ''
       return effect.target === 'self'
         ? `Take ${effect.amount} damage`
-        : `Deal ${effect.amount} damage${scaling}`
+        : `Deal ${effect.amount} damage${scaling}${pierce}`
     }
     case 'heal':
       return effect.target === 'enemy' ? `Heal foe ${effect.amount}` : `Heal ${effect.amount}`
@@ -65,6 +73,8 @@ export function describeEffect(effect: Effect): string {
         : 'Your familiars strike now'
     case 'counter':
       return "Cancel the rival's next spell"
+    case 'cleanse':
+      return 'Remove your Burn, Chill, Brand and Stain'
   }
 }
 
@@ -91,10 +101,18 @@ export function describeWord(word: WordDef): string {
           return 'Cast it again at the start of your next turn'
         case 'expand':
           return `This spell may hold ${modifier.words} more words`
+        case 'intensify':
+          return `+${modifier.amount} to every status this spell applies`
+        case 'lifesteal':
+          return `Heal ${Math.round(modifier.share * 100)}% of the damage this spell deals`
+        case 'pierce':
+          return "This spell's damage ignores wards"
       }
     }
     case 'edit':
-      return "Strike out a word of the rival's next spell"
+      return word.edit === 'redact'
+        ? "Strike out any word of the rival's next spell, even its verb"
+        : "Strike out a word of the rival's next spell (not its verb)"
   }
 }
 
@@ -112,7 +130,9 @@ export function describeSpell(result: ComposeResult): string {
   const times =
     result.times === 1 ? '' : ` — ${result.times === 2 ? 'twice' : `${result.times} times`}`
   const echo = result.echo ? ', echoes next turn' : ''
-  return `${once}${times}${echo}`
+  const lifesteal =
+    result.lifesteal > 0 ? `, heal ${Math.round(result.lifesteal * 100)}% of damage` : ''
+  return `${once}${times}${echo}${lifesteal}`
 }
 
 export function wordName(content: Pick<DuelContent, 'words'>, wordId: string): string {
@@ -148,7 +168,7 @@ export function describeEvent(event: CombatEvent, content: DuelContent): string 
       return `${who(event.target)} took ${event.amount}${from}${blocked}`
     }
     case 'heal':
-      return `${who(event.target)} healed ${event.amount}${event.source ? ' (Regen)' : ''}`
+      return `${who(event.target)} healed ${event.amount}${event.source === 'regen' ? ' (Regen)' : event.source === 'lifesteal' ? ' (Vampiric)' : ''}`
     case 'shield':
       return `${who(event.target)} raised ward ${event.amount}`
     case 'statusApplied':
@@ -167,6 +187,8 @@ export function describeEvent(event: CombatEvent, content: DuelContent): string 
       return `${content.enemy.name}'s spell is blotted out`
     case 'echo':
       return `${who(event.side)} echo “${sentence(content, event.words)}”`
+    case 'cleansed':
+      return `${who(event.side)} purged harmful statuses`
     case 'death':
       return event.side === 'enemy' ? `${content.enemy.name} is defeated` : 'You are defeated'
   }
@@ -176,6 +198,7 @@ const DAMAGE_SOURCES: Record<DamageSource, string> = {
   burn: 'Burn',
   thorns: 'Thorns',
   minion: 'a familiar',
+  stain: 'Stain',
 }
 
 function withArticle(noun: string): string {

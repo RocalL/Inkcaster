@@ -26,7 +26,9 @@ describe('describeWord', () => {
     expect(describeWord(word('twice'))).toBe('Cast the spell twice')
     expect(describeWord(word('greater'))).toBe("+3 to the verb's numbers")
     expect(describeWord(word('fire'))).toBe('Burn 2')
-    expect(describeWord(word('erase'))).toBe("Strike out a word of the rival's next spell")
+    expect(describeWord(word('erase'))).toBe(
+      "Strike out a word of the rival's next spell (not its verb)",
+    )
   })
 })
 

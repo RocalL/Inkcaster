@@ -50,6 +50,7 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
     return card ? [getWord(content, card.wordId)] : []
   })
   const erasing = selectedWords.some((word) => word.kind === 'edit')
+  const redacting = selectedWords.some((word) => word.kind === 'edit' && word.edit === 'redact')
   const blotting = selectedWords.some(
     (word) => word.kind === 'verb' && word.effects.some((effect) => effect.kind === 'counter'),
   )
@@ -73,7 +74,7 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
         {state.enemy.intent.map((intentWord, index) => {
           const word = getWord(content, intentWord.wordId)
           const targeted = eraseTargets.includes(index)
-          const erasable = erasing && !intentWord.erased && word.kind !== 'verb'
+          const erasable = erasing && !intentWord.erased && (redacting || word.kind !== 'verb')
           return (
             <button
               key={index}
@@ -90,13 +91,23 @@ function RivalIntent({ content, state }: { content: DuelContent; state: DuelStat
         })}
       </div>
       <span className="intent-effect">
-        {cancelled
-          ? 'Blotted out: it will not be cast'
-          : describeSpell(previewIntent(content, pending))}
+        {cancelled ? 'Blotted out: it will not be cast' : describeIntent(content, pending)}
       </span>
-      {erasing && <span className="intent-hint">Choose a word to erase (not the verb)</span>}
+      {erasing && (
+        <span className="intent-hint">
+          {redacting
+            ? 'Choose a word to strike out, even the verb'
+            : 'Choose a word to erase (not the verb)'}
+        </span>
+      )}
     </div>
   )
+}
+
+/** The rival's spell preview; a struck verb means the spell fizzles. */
+function describeIntent(content: DuelContent, state: DuelState): string {
+  const preview = previewIntent(content, state)
+  return preview.ok ? describeSpell(preview) : 'Fizzles: its verb is struck out'
 }
 
 const REJECTION_TEXT: Record<RejectReason, string> = {
